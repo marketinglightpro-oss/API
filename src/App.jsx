@@ -136,16 +136,9 @@ export default function App() {
             history: item.history || [],
           }));
           
-          // Merge with local items that haven't synced yet
-          setEquipmentList((prev) => {
-            const combined = [...mapped];
-            prev.forEach((localItem) => {
-              if (!combined.some((remoteItem) => remoteItem.id === localItem.id)) {
-                combined.push(localItem);
-              }
-            });
-            return combined;
-          });
+          // Set equipmentList directly from Supabase (Supabase is authoritative)
+          setEquipmentList(mapped);
+          localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
         }
 
         const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
@@ -594,7 +587,9 @@ export default function App() {
       return;
     }
 
-    setEquipmentList((prev) => prev.filter((i) => i.id !== itemId));
+    const updatedList = equipmentList.filter((i) => i.id !== itemId);
+    setEquipmentList(updatedList);
+    localStorage.setItem('lightpro_equipment', JSON.stringify(updatedList));
 
     if (selectedItem && selectedItem.id === itemId) {
       setSelectedItem(null);
@@ -619,6 +614,9 @@ export default function App() {
         const { error: delErr } = await supabase.from('equipment').delete().eq('id', itemId);
         if (delErr) {
           console.error('Error eliminando equipo de Supabase:', delErr);
+          alert(`Atención: No se pudo eliminar de la base de datos Supabase: ${delErr.message}`);
+        } else {
+          console.log(`[Supabase Delete] Equipo ${itemId} eliminado exitosamente de la nube.`);
         }
         await supabase.from('activity_logs').insert([{
           id: newLog.id,
