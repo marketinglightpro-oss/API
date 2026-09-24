@@ -56,6 +56,17 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
     setPassword(generated);
   };
 
+  // UUID Helper for Supabase Compatibility
+  const getValidUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   // Create User Handler
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -68,12 +79,12 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
 
     setLoading(true);
 
-    const generatedId = `usr-${Date.now()}`;
-    let createdAuthId = generatedId;
+    let createdAuthId = null;
+    let syncError = null;
 
     if (isSupabaseConfigured && supabase) {
       try {
-        // Attempt Supabase Auth Sign Up
+        // 1. Attempt Supabase Auth Sign Up
         const { data: authData, error: signUpErr } = await supabase.auth.signUp({
           email: email.trim(),
           password: password.trim(),
@@ -87,14 +98,18 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
         });
 
         if (signUpErr) {
-          console.warn('Notice Supabase Auth signUp:', signUpErr.message);
-        }
-
-        if (authData?.user) {
+          console.error('Error de Supabase Auth signUp:', signUpErr);
+          syncError = `Auth Error: ${signUpErr.message}`;
+        } else if (authData?.user) {
           createdAuthId = authData.user.id;
         }
 
-        // Upsert into public.profiles table
+        // Fallback valid UUID if authData user ID is missing
+        if (!createdAuthId) {
+          createdAuthId = getValidUUID();
+        }
+
+        // 2. Insert/Upsert into public.profiles table
         const { error: profErr } = await supabase.from('profiles').upsert([{
           id: createdAuthId,
           email: email.trim(),
@@ -105,15 +120,28 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
         }]);
 
         if (profErr) {
-          console.warn('Notice Supabase profiles insert error:', profErr.message);
+          console.error('Error de Supabase Profiles insert:', profErr);
+          if (!syncError) {
+            syncError = `Error en perfiles: ${profErr.message}`;
+          }
         }
       } catch (err) {
-        console.warn('Error general creando usuario en Supabase:', err);
+        console.error('Error general creando usuario en Supabase:', err);
+        syncError = `Error general: ${err.message || err}`;
       }
+    } else {
+      createdAuthId = getValidUUID();
+    }
+
+    // If there was an error saving to Supabase Auth or Profiles, display it to the user
+    if (syncError) {
+      setErrorMsg(`No se pudo crear en Supabase: ${syncError}`);
+      setLoading(false);
+      return; // Keep modal open so admin sees the exact error message!
     }
 
     const newUserObj = {
-      id: createdAuthId,
+      id: createdAuthId || getValidUUID(),
       full_name: fullName.trim(),
       email: email.trim(),
       role: role,
