@@ -690,6 +690,7 @@ export default function App() {
         <EquipmentDetailModal
           item={selectedItem}
           currentRole={currentRole}
+          currentUser={currentUser}
           teamMembers={teamMembers}
           onUpdateStatus={handleMoveStage}
           onAssignTechnician={handleAssignTechnician}
