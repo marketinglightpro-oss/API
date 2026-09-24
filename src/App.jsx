@@ -13,9 +13,9 @@ import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
-// Helper to filter out legacy mock items (keeps EQ-7434, EQ9864, EQ-9864, and newly registered user equipment)
-const ALLOWED_EQUIPMENT_IDS = new Set(['EQ-7434', 'EQ9864', 'EQ-9864']);
-const MOCK_CUTOFF_TIMESTAMP = new Date('2026-09-24T14:00:00Z').getTime();
+// Helper to filter out legacy mock items (keeps EQ-7334, EQ-9864, EQ-9494, and newly registered user equipment)
+const ALLOWED_EQUIPMENT_IDS = new Set(['EQ-7334', 'EQ-7434', 'EQ9864', 'EQ-9864', 'EQ-9494']);
+const MOCK_CUTOFF_TIMESTAMP = new Date('2026-09-24T00:00:00Z').getTime();
 
 const isMockEquipmentId = (id, createdAt) => {
   if (!id) return true;
