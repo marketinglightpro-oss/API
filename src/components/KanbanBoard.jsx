@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye } from 'lucide-react';
+import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar } from 'lucide-react';
 
 export default function KanbanBoard({
   equipmentList,
@@ -147,11 +147,30 @@ export default function KanbanBoard({
                         <span className="truncate font-mono text-[10px] text-gray-400">{item.serialNumber}</span>
                       </div>
 
-                      {/* Owner Preview */}
-                      <div className="flex items-center gap-1 text-[11px] text-gray-600 mb-2 truncate">
-                        <User className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                        <span className="truncate font-medium">{item.ownerName}</span>
+                      {/* Owner & Assigned Technician Preview */}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-600 mb-2">
+                        <span className="flex items-center gap-1 truncate font-medium">
+                          <User className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{item.ownerName}</span>
+                        </span>
+
+                        {item.technicianAssigned && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                            <Wrench className="w-2.5 h-2.5 text-blue-600" />
+                            {item.technicianAssigned}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Promised Date Badge */}
+                      {item.promisedDate && (
+                        <div className="mb-2">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
+                            <Calendar className="w-3 h-3 text-amber-700" />
+                            Promesa: {item.promisedDate}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Issue Preview */}
                       <p className="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-3 italic">

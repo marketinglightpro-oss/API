@@ -1,14 +1,23 @@
 import React, { useState, useRef } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye } from 'lucide-react';
+import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck } from 'lucide-react';
 
-export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus, onAddNote, onOpenQRModal, onClose }) {
+export default function EquipmentDetailModal({ item, currentRole, teamMembers = [], onUpdateStatus, onAssignTechnician, onSetPromisedDate, onAddNote, onOpenQRModal, onClose }) {
   const [newNoteText, setNewNoteText] = useState('');
   const [notePhotos, setNotePhotos] = useState([]);
   const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState(null);
   const notePhotoInputRef = useRef(null);
 
   const currentStage = KANBAN_STAGES.find((s) => s.id === item.status) || KANBAN_STAGES[0];
+
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Administrador';
+      case 'technician': return 'Técnico';
+      default: return 'Cliente';
+    }
+  };
 
   // Helper for compressing image
   const compressImage = (file) => {
@@ -356,7 +365,52 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
               )}
             </div>
 
-            {/* Equipment Metadata */}
+            {/* Team Member Assignment & Promised Repair Date Panel */}
+            {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') && (
+              <div className="p-3 sm:p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3 text-xs">
+                <h3 className="font-bold text-amber-900 uppercase text-[10px] tracking-wider flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Asignación & Compromiso</span>
+                </h3>
+
+                {/* Technician Assignment */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">
+                    Técnico Encargado
+                  </label>
+                  <select
+                    value={item.technicianAssigned || ''}
+                    onChange={(e) => onAssignTechnician && onAssignTechnician(item.id, e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value="">Seleccionar del equipo...</option>
+                    {teamMembers.map((m) => (
+                      <option key={m.id || m.email} value={m.full_name}>
+                        {m.full_name} ({getRoleLabel(m.role)})
+                      </option>
+                    ))}
+                    {!teamMembers.some(m => m.full_name === 'Carlos Mendoza') && <option value="Carlos Mendoza">Carlos Mendoza (Técnico)</option>}
+                    {!teamMembers.some(m => m.full_name === 'Andrés Silva') && <option value="Andrés Silva">Andrés Silva (Administrador)</option>}
+                  </select>
+                </div>
+
+                {/* Promised Repair Date */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1 flex items-center justify-between">
+                    <span>Fecha Promesa de Reparación</span>
+                    <Calendar className="w-3 h-3 text-amber-700" />
+                  </label>
+                  <input
+                    type="date"
+                    value={item.promisedDate || ''}
+                    onChange={(e) => onSetPromisedDate && onSetPromisedDate(item.id, e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Equipment Metadata Specifications */}
             <div className="p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200/80 space-y-1.5 text-xs">
               <h3 className="font-bold text-gray-900 uppercase text-[10px] tracking-wider">Especificaciones</h3>
               <div className="flex justify-between border-b border-gray-200/50 pb-1">
@@ -369,8 +423,16 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
               </div>
               <div className="flex justify-between border-b border-gray-200/50 pb-1">
                 <span className="text-gray-500">Técnico:</span>
-                <span className="font-semibold text-gray-900">{item.technicianAssigned || 'Sin asignar'}</span>
+                <span className="font-bold text-black">{item.technicianAssigned || 'Sin asignar'}</span>
               </div>
+              {item.promisedDate && (
+                <div className="flex justify-between border-b border-gray-200/50 pb-1">
+                  <span className="text-gray-500">Promesa Entrega:</span>
+                  <span className="font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded text-[10px]">
+                    {item.promisedDate}
+                  </span>
+                </div>
+              )}
             </div>
 
           </div>

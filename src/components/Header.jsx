@@ -1,7 +1,11 @@
-import React from 'react';
-import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogOut, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogOut, Users, CheckCheck, Clock, ChevronRight } from 'lucide-react';
 
-export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onSignOut }) {
+export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onSignOut, notifications = [], onMarkNotificationsRead, onSelectNotification }) {
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   const roles = [
     { id: 'super_admin', label: 'Super Admin', icon: Shield },
     { id: 'admin', label: 'Admin', icon: Shield },
@@ -16,7 +20,6 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
     { id: 'logs', label: 'Historial', icon: Activity },
   ];
 
-  // If Super Admin or Admin, add User Management tab
   if (currentRole === 'super_admin' || currentRole === 'admin') {
     tabs.push({ id: 'users', label: 'Usuarios', icon: Users });
   }
@@ -25,7 +28,7 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
     <>
       {/* Top Header - Full Fluid Width Layout */}
       <header className="sticky top-2 z-40 mb-4 w-full px-3 sm:px-6 md:px-8">
-        <div className="liquid-card rounded-2xl sm:rounded-full px-4 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-lg border border-white/80 overflow-hidden w-full">
+        <div className="liquid-card rounded-2xl sm:rounded-full px-4 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-lg border border-white/80 overflow-visible w-full relative">
           
           {/* Brand Logo & QR Badge */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -60,8 +63,8 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
             })}
           </nav>
 
-          {/* Right Section: Role Indicator, User Profile & Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Right Section: Role Indicator, User Profile & Logout & Notification Bell */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 relative">
             
             {/* Role Switcher Pill */}
             <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
@@ -101,10 +104,79 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
               </div>
             )}
 
-            {/* Notification Bell */}
-            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:shadow transition-all flex-shrink-0">
-              <Bell className="w-4 h-4" />
-            </button>
+            {/* Notification Bell Button with Badge */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:shadow transition-all flex-shrink-0 relative"
+                title="Centro de Notificaciones"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center animate-pulse border-2 border-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Dropdown Panel */}
+              {showNotifications && (
+                <div className="absolute right-0 top-11 w-80 sm:w-96 bg-white rounded-3xl border border-gray-200 shadow-2xl z-50 p-4 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold">
+                        <Bell className="w-3.5 h-3.5" />
+                      </div>
+                      <h4 className="font-bold text-xs text-gray-900 tracking-tight">Notificaciones del Sistema</h4>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={onMarkNotificationsRead}
+                        className="text-[10px] font-semibold text-gray-500 hover:text-black flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full"
+                      >
+                        <CheckCheck className="w-3 h-3 text-emerald-600" />
+                        <span>Marcar leídas</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1 text-xs">
+                    {notifications.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic text-center py-6">No hay notificaciones recientes.</p>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            setShowNotifications(false);
+                            if (onSelectNotification) onSelectNotification(n);
+                          }}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                            n.read ? 'bg-gray-50/70 border-gray-100 text-gray-600' : 'bg-amber-50/50 border-amber-200 text-gray-900 font-medium shadow-sm'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] mb-1">
+                            <span className="font-bold uppercase tracking-wider text-black">{n.title}</span>
+                            <span className="text-gray-400 font-mono text-[9px] flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] leading-snug">{n.detail}</p>
+                          {n.equipmentId && (
+                            <div className="mt-1.5 flex items-center justify-end text-[10px] font-bold text-gray-800 hover:underline gap-0.5">
+                              <span>Ver equipo ({n.equipmentId})</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
 
         </div>

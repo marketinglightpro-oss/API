@@ -30,6 +30,37 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
   });
 
+  // Team Members / Staff State
+  const [teamMembers, setTeamMembers] = useState([
+    { id: '1', full_name: 'Carlos Mendoza', role: 'technician', email: 'carlos@lightpro.com' },
+    { id: '2', full_name: 'Andrés Silva', role: 'admin', email: 'andres@lightpro.com' },
+    { id: '3', full_name: 'Stivens', role: 'super_admin', email: 'light.pro01@hotmail.com' },
+    { id: '4', full_name: 'Mariana Gómez', role: 'technician', email: 'mariana@lightpro.com' },
+  ]);
+
+  // Live Bell Notifications State
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('lightpro_notifications');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'N-1',
+        title: 'Equipo Asignado',
+        detail: 'Cabina JBL (EQ-3958) fue asignada a Carlos Mendoza (Técnico)',
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: 'EQ-3958',
+      },
+      {
+        id: 'N-2',
+        title: 'Promesa de Reparación',
+        detail: 'Cabina JBL (EQ-3958) tiene fecha estimada de entrega para el 26/09/2026',
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: 'EQ-3958',
+      }
+    ];
+  });
+
   // Filter States
   const [activeCategory, setActiveCategory] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,6 +146,7 @@ export default function App() {
             priority: item.priority,
             status: item.status,
             technicianAssigned: item.technician_assigned,
+            promisedDate: item.promised_date,
             createdAt: item.created_at,
             photoUrl: item.photo_url,
             photos: item.photos || (item.photo_url ? [item.photo_url] : []),
@@ -146,6 +178,11 @@ export default function App() {
           }));
           setLogs(mappedLogs);
         }
+
+        const { data: profileData, error: profErr } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        if (!profErr && profileData && profileData.length > 0) {
+          setTeamMembers(profileData);
+        }
       } catch (err) {
         console.warn('Supabase fetch error, using local state:', err);
       }
@@ -162,6 +199,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lightpro_logs', JSON.stringify(logs));
   }, [logs]);
+
+  useEffect(() => {
+    localStorage.setItem('lightpro_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   // Sign out handler
   const handleSignOut = async () => {
@@ -225,6 +266,19 @@ export default function App() {
     };
     setLogs((prev) => [newLog, ...prev]);
 
+    // Push notification to Bell
+    setNotifications((prev) => [
+      {
+        id: `NOTIF-${Date.now()}`,
+        title: 'Cambio de Etapa',
+        detail: `Equipo ${targetItem?.name || itemId} avanzó a "${stageObj?.title}"`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: itemId,
+      },
+      ...prev,
+    ]);
+
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
@@ -239,6 +293,112 @@ export default function App() {
         }]);
       } catch (err) {
         console.error('Error updating Supabase:', err);
+      }
+    }
+  };
+
+  // Handle Technician Assignment
+  const handleAssignTechnician = async (itemId, technicianName) => {
+    const targetItem = equipmentList.find((i) => i.id === itemId);
+
+    setEquipmentList((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, technicianAssigned: technicianName } : item))
+    );
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem((prev) => ({ ...prev, technicianAssigned: technicianName }));
+    }
+
+    const authorName = currentUser ? (currentUser.user_metadata?.full_name || currentUser.email) : 'Sistema';
+
+    const newLog = {
+      id: `LOG-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      user: authorName,
+      role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
+      action: 'Técnico Asignado',
+      detail: `Equipo ${targetItem?.name || itemId} asignado a ${technicianName}`,
+    };
+    setLogs((prev) => [newLog, ...prev]);
+
+    setNotifications((prev) => [
+      {
+        id: `NOTIF-${Date.now()}`,
+        title: 'Técnico Asignado',
+        detail: `Equipo ${targetItem?.name || itemId} asignado a ${technicianName}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: itemId,
+      },
+      ...prev,
+    ]);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('equipment').update({ technician_assigned: technicianName }).eq('id', itemId);
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error updating technician in Supabase:', err);
+      }
+    }
+  };
+
+  // Handle Promised Repair Date Setting
+  const handleSetPromisedDate = async (itemId, dateStr) => {
+    const targetItem = equipmentList.find((i) => i.id === itemId);
+
+    setEquipmentList((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, promisedDate: dateStr } : item))
+    );
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem((prev) => ({ ...prev, promisedDate: dateStr }));
+    }
+
+    const authorName = currentUser ? (currentUser.user_metadata?.full_name || currentUser.email) : 'Sistema';
+
+    const newLog = {
+      id: `LOG-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      user: authorName,
+      role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
+      action: 'Promesa de Reparación',
+      detail: `Fecha promesa de entrega para ${targetItem?.name || itemId}: ${dateStr}`,
+    };
+    setLogs((prev) => [newLog, ...prev]);
+
+    setNotifications((prev) => [
+      {
+        id: `NOTIF-${Date.now()}`,
+        title: 'Promesa de Reparación',
+        detail: `Fecha estimada para ${targetItem?.name || itemId}: ${dateStr}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: itemId,
+      },
+      ...prev,
+    ]);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('equipment').update({ promised_date: dateStr }).eq('id', itemId);
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error updating promised date in Supabase:', err);
       }
     }
   };
@@ -358,9 +518,21 @@ export default function App() {
       user: note.author,
       role: note.role,
       action: 'Nota de Mantenimiento',
-      detail: `Nota añadida a ${itemId}: "${note.text}"`,
+      detail: `Nota añadida a ${itemId}: "${note.text || 'Evidencia adjunta'}"`,
     };
     setLogs((prev) => [newLog, ...prev]);
+
+    setNotifications((prev) => [
+      {
+        id: `NOTIF-${Date.now()}`,
+        title: 'Nueva Nota / Evidencia',
+        detail: `${note.author} (${note.role}) agregó una observación a ${itemId}`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        equipmentId: itemId,
+      },
+      ...prev,
+    ]);
 
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
@@ -418,6 +590,16 @@ export default function App() {
         }}
         currentUser={currentUser}
         onSignOut={handleSignOut}
+        notifications={notifications}
+        onMarkNotificationsRead={() => {
+          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        }}
+        onSelectNotification={(notif) => {
+          if (notif.equipmentId) {
+            const eq = equipmentList.find((e) => e.id === notif.equipmentId);
+            if (eq) setSelectedItem(eq);
+          }
+        }}
       />
 
       {/* Role & Database Status Notice Banner */}
@@ -508,7 +690,10 @@ export default function App() {
         <EquipmentDetailModal
           item={selectedItem}
           currentRole={currentRole}
+          teamMembers={teamMembers}
           onUpdateStatus={handleMoveStage}
+          onAssignTechnician={handleAssignTechnician}
+          onSetPromisedDate={handleSetPromisedDate}
           onAddNote={handleAddNote}
           onOpenQRModal={(item) => {
             setSelectedItem(null);
