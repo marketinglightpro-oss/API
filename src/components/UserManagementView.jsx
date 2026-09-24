@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { Users, UserPlus, Shield, Wrench, User, Trash2, CheckCircle2, Plus, Copy, Eye, EyeOff, RefreshCw, Key, Search, Phone, Mail, Sparkles, AlertCircle } from 'lucide-react';
 
-export default function UserManagementView({ currentUser, teamMembers = [], onUpdateTeamMembers }) {
+export default function UserManagementView({ currentUser, currentRole = 'super_admin', teamMembers = [], onUpdateTeamMembers }) {
   const [users, setUsers] = useState(teamMembers || []);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -346,7 +346,7 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
                   Gestión de Equipos & Personal de LIGHTPRO
                 </h2>
                 <span className="text-[10px] font-bold uppercase bg-amber-400 text-black px-2.5 py-0.5 rounded-full">
-                  Exclusivo Super Admin / Admin
+                  Exclusivo Super Admin
                 </span>
               </div>
               <p className="text-xs text-gray-500">
@@ -470,32 +470,38 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
                     </td>
                     <td className="py-3.5 px-3">{getRoleBadge(u.role)}</td>
                     <td className="py-3.5 px-3">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleUpdateRole(u.id, e.target.value)}
-                        className="bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs cursor-pointer"
-                      >
-                        <option value="super_admin">Super Admin</option>
-                        <option value="admin">Administrador</option>
-                        <option value="technician">Técnico</option>
-                        <option value="client">Cliente</option>
-                      </select>
+                      {currentRole === 'super_admin' ? (
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleUpdateRole(u.id, e.target.value)}
+                          className="bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs cursor-pointer"
+                        >
+                          <option value="super_admin">Super Admin</option>
+                          <option value="admin">Administrador</option>
+                          <option value="technician">Técnico</option>
+                          <option value="client">Cliente</option>
+                        </select>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-gray-400 italic">Exclusivo Super Admin</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 text-gray-400 font-mono text-[11px]">
                       {new Date(u.created_at || Date.now()).toLocaleDateString()}
                     </td>
                     <td className="py-3.5 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenResetModal(u)}
-                          className="p-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-700 hover:text-amber-900 transition-colors border border-gray-200 flex items-center gap-1 text-[11px] font-bold px-2.5 shadow-xs"
-                          title="Restablecer o Asignar Nueva Contraseña (Exclusivo Super Admin)"
-                        >
-                          <Key className="w-3.5 h-3.5 text-amber-600" />
-                          <span className="hidden sm:inline">Nueva Clave</span>
-                        </button>
+                        {currentRole === 'super_admin' && (
+                          <button
+                            onClick={() => handleOpenResetModal(u)}
+                            className="p-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-700 hover:text-amber-900 transition-colors border border-gray-200 flex items-center gap-1 text-[11px] font-bold px-2.5 shadow-xs"
+                            title="Restablecer o Asignar Nueva Contraseña (Exclusivo Super Admin)"
+                          >
+                            <Key className="w-3.5 h-3.5 text-amber-600" />
+                            <span className="hidden sm:inline">Nueva Clave</span>
+                          </button>
+                        )}
 
-                        {u.role !== 'super_admin' && (
+                        {currentRole === 'super_admin' && u.role !== 'super_admin' && (
                           <button
                             onClick={() => handleDeleteUser(u.id)}
                             className="p-1.5 rounded-xl bg-white hover:bg-red-50 text-gray-400 hover:text-red-700 transition-colors border border-gray-200 shadow-xs"
@@ -503,6 +509,10 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {currentRole !== 'super_admin' && (
+                          <span className="text-gray-300 text-[11px] font-mono">-</span>
                         )}
                       </div>
                     </td>
@@ -621,9 +631,11 @@ export default function UserManagementView({ currentUser, teamMembers = [], onUp
                   className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black font-bold"
                 >
                   <option value="technician">Técnico (Diagnóstico, Kanban, comentarios y QR)</option>
-                  <option value="admin">Administrador (Asignar roles y borrado)</option>
+                  <option value="admin">Administrador (Gestión de usuarios y equipos)</option>
                   <option value="client">Cliente (Registrar equipos y seguimiento)</option>
-                  <option value="super_admin">Super Admin (Control Total del Sistema)</option>
+                  {currentRole === 'super_admin' && (
+                    <option value="super_admin">Super Admin (Control Total del Sistema)</option>
+                  )}
                 </select>
               </div>
 

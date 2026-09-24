@@ -279,6 +279,13 @@ export default function App() {
     localStorage.setItem('lightpro_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  // Security Redirect: Prevent technician and client from accessing equipos tab
+  useEffect(() => {
+    if ((currentRole === 'technician' || currentRole === 'client') && (activeTab === 'equipos' || activeTab === 'users')) {
+      setActiveTab('reparaciones');
+    }
+  }, [currentRole, activeTab]);
+
   // Sign out handler
   const handleSignOut = async () => {
     if (isSupabaseConfigured && supabase) {
@@ -741,9 +748,10 @@ export default function App() {
         />
       )}
 
-      {(activeTab === 'equipos' || activeTab === 'users') && (
+      {(activeTab === 'equipos' || activeTab === 'users') && (currentRole === 'super_admin' || currentRole === 'admin') && (
         <UserManagementView
           currentUser={currentUser}
+          currentRole={currentRole}
           teamMembers={teamMembers}
           onUpdateTeamMembers={(updated) => setTeamMembers(updated)}
         />
