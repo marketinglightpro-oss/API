@@ -1,15 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2 } from 'lucide-react';
+import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye } from 'lucide-react';
 
 export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus, onAddNote, onOpenQRModal, onClose }) {
   const [newNoteText, setNewNoteText] = useState('');
+  const [notePhotos, setNotePhotos] = useState([]);
+  const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState(null);
+  const notePhotoInputRef = useRef(null);
 
   const currentStage = KANBAN_STAGES.find((s) => s.id === item.status) || KANBAN_STAGES[0];
 
+  // Helper for compressing image
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => resolve(event.target.result);
+      };
+      reader.onerror = () => resolve('');
+    });
+  };
+
+  const handleAddNotePhoto = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        const compressed = await compressImage(file);
+        setNotePhotos((prev) => [...prev, compressed]);
+      } catch (err) {
+        console.error('Error al comprimir imagen de nota:', err);
+      }
+    }
+  };
+
+  const handleRemoveNotePhoto = (idxToRemove) => {
+    setNotePhotos((prev) => prev.filter((_, i) => i !== idxToRemove));
+  };
+
   const handleAddNoteSubmit = (e) => {
     e.preventDefault();
-    if (!newNoteText.trim()) return;
+    if (!newNoteText.trim() && notePhotos.length === 0) return;
 
     const authorName = currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : item.ownerName;
     const authorRole = currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente';
@@ -19,11 +76,18 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
       author: authorName,
       role: authorRole,
       text: newNoteText.trim(),
+      photos: notePhotos,
       date: new Date().toISOString(),
     });
 
     setNewNoteText('');
+    setNotePhotos([]);
   };
+
+  // Combine item damage photos from photos array or single photoUrl
+  const allEquipmentPhotos = item.photos && item.photos.length > 0
+    ? item.photos
+    : item.photoUrl ? [item.photoUrl] : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -107,20 +171,42 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
           {/* Main Info Column */}
           <div className="md:col-span-2 space-y-4">
             
-            {/* Issue Description */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200/70">
-              <h3 className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase tracking-wider mb-1">
-                Falla Reportada / Motivo de Mantenimiento
-              </h3>
-              <p className="text-xs text-gray-700 leading-relaxed">{item.issue}</p>
-            </div>
+            {/* Equipment Damage Photos Gallery Section */}
+            {allEquipmentPhotos.length > 0 && (
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-gray-50 border border-gray-200/70">
+                <h3 className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-black" />
+                    <span>Fotografías de Daño / Ingreso ({allEquipmentPhotos.length})</span>
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-normal">Toca para ampliar</span>
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {allEquipmentPhotos.map((photoUrl, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setSelectedPreviewPhoto(photoUrl)}
+                      className="relative rounded-xl overflow-hidden border border-gray-200 h-24 bg-black cursor-pointer group shadow-sm hover:border-black transition-all"
+                    >
+                      <img src={photoUrl} alt={`Foto Daño ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Eye className="w-5 h-5 text-white" />
+                      </div>
+                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-mono px-1.5 py-0.5 rounded">
+                        Foto {idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick Status Update Selector */}
             {(currentRole === 'admin' || currentRole === 'technician') && (
               <div className="p-3 sm:p-4 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-xs font-bold text-gray-900">Actualizar Etapa</h4>
-                  <p className="text-[10px] sm:text-[11px] text-gray-500">Notifica al cliente</p>
+                  <h4 className="text-xs font-bold text-gray-900">Actualizar Etapa de Mantenimiento</h4>
+                  <p className="text-[10px] sm:text-[11px] text-gray-500">Notifica al cliente en tiempo real</p>
                 </div>
                 <select
                   value={item.status}
@@ -134,43 +220,107 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
               </div>
             )}
 
-            {/* Technician Notes Log Section */}
+            {/* Technician Notes Log Section with Evidence Photos */}
             <div className="space-y-2.5">
               <h3 className="text-[10px] sm:text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Wrench className="w-3.5 h-3.5 text-black" />
-                <span>Notas Técnicas y Observaciones</span>
+                <span>Notas Técnicas, Actualizaciones y Evidencias</span>
               </h3>
 
-              {/* Note Input */}
-              <form onSubmit={handleAddNoteSubmit} className="flex gap-2">
+              {/* Note Input with Photo Attachment Button */}
+              <form onSubmit={handleAddNoteSubmit} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Escribe actualización u observación técnica..."
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => notePhotoInputRef.current?.click()}
+                    className="px-3 py-2 bg-gray-100 border border-gray-200 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors"
+                    title="Adjuntar evidencia fotográfica"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-black" />
+                    <span className="hidden sm:inline">Evidencia</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="liquid-btn-primary px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agregar</span>
+                  </button>
+                </div>
+
                 <input
-                  type="text"
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  placeholder="Agregar nota técnica..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                  type="file"
+                  ref={notePhotoInputRef}
+                  onChange={handleAddNotePhoto}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
                 />
-                <button
-                  type="submit"
-                  className="liquid-btn-primary px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Agregar</span>
-                </button>
+
+                {/* Note evidence photos draft preview */}
+                {notePhotos.length > 0 && (
+                  <div className="flex items-center gap-2 p-2 bg-gray-100/70 rounded-xl">
+                    <span className="text-[10px] font-semibold text-gray-500">Evidencias a adjuntar:</span>
+                    <div className="flex items-center gap-1.5">
+                      {notePhotos.map((photo, idx) => (
+                        <div key={idx} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-300">
+                          <img src={photo} alt={`Evidencia ${idx}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveNotePhoto(idx)}
+                            className="absolute top-0 right-0 p-0.5 bg-red-600 text-white rounded-bl"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </form>
 
-              {/* Notes List */}
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+              {/* Notes Timeline List with Attached Evidence Photos */}
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {(!item.notes || item.notes.length === 0) ? (
-                  <p className="text-xs text-gray-400 italic p-3 bg-gray-50 rounded-xl">No hay notas técnicas registradas aún.</p>
+                  <p className="text-xs text-gray-400 italic p-3 bg-gray-50 rounded-xl">No hay notas técnicas ni evidencias registradas aún.</p>
                 ) : (
                   item.notes.map((note) => (
-                    <div key={note.id} className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 text-xs">
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
-                        <span className="font-bold text-gray-800">{note.author} ({note.role})</span>
+                    <div key={note.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-gray-400">
+                        <span className="font-bold text-gray-900">{note.author} ({note.role})</span>
                         <span>{new Date(note.date).toLocaleString()}</span>
                       </div>
-                      <p className="text-gray-700">{note.text}</p>
+                      {note.text && <p className="text-gray-800 font-medium">{note.text}</p>}
+
+                      {/* Render note evidence photos */}
+                      {note.photos && note.photos.length > 0 && (
+                        <div className="pt-1">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Evidencias Adjuntas:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {note.photos.map((ph, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => setSelectedPreviewPhoto(ph)}
+                                className="w-14 h-14 rounded-lg overflow-hidden border border-gray-300 bg-black cursor-pointer hover:border-black transition-all relative group"
+                              >
+                                <img src={ph} alt={`Evidencia ${idx + 1}`} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                                  <Eye className="w-3.5 h-3.5 text-white" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -226,6 +376,26 @@ export default function EquipmentDetailModal({ item, currentRole, onUpdateStatus
           </div>
 
         </div>
+
+        {/* Fullscreen Photo Lightbox Preview Modal */}
+        {selectedPreviewPhoto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+            <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+              <button
+                onClick={() => setSelectedPreviewPhoto(null)}
+                className="absolute -top-10 right-0 p-2 bg-gray-800 text-white rounded-full hover:bg-white hover:text-black transition-colors"
+                title="Cerrar vista previa"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <img
+                src={selectedPreviewPhoto}
+                alt="Fotografía Ampliada"
+                className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-gray-800"
+              />
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

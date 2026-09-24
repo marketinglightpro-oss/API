@@ -14,6 +14,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     priority: 'Media',
     technicianAssigned: currentRole === 'technician' ? 'Técnico Usuario' : 'Carlos Mendoza',
     photoUrl: '',
+    photos: [],
   });
 
   const [error, setError] = useState('');
@@ -65,11 +66,29 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     if (file) {
       try {
         const compressedBase64 = await compressImage(file);
-        setFormData((prev) => ({ ...prev, photoUrl: compressedBase64 }));
+        setFormData((prev) => {
+          const updatedPhotos = [...prev.photos, compressedBase64];
+          return {
+            ...prev,
+            photos: updatedPhotos,
+            photoUrl: updatedPhotos[0] || '',
+          };
+        });
       } catch (err) {
         console.error('Error al comprimir la imagen:', err);
       }
     }
+  };
+
+  const handleRemovePhoto = (indexToRemove) => {
+    setFormData((prev) => {
+      const updatedPhotos = prev.photos.filter((_, idx) => idx !== indexToRemove);
+      return {
+        ...prev,
+        photos: updatedPhotos,
+        photoUrl: updatedPhotos[0] || '',
+      };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -85,6 +104,8 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
       id: newId,
       status: 'received',
       createdAt: new Date().toISOString(),
+      photos: formData.photos,
+      photoUrl: formData.photos[0] || '',
       notes: [],
       history: [
         {
@@ -190,23 +211,44 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
             </div>
           </div>
 
-          {/* Photo Capture Section (Real Smartphone Camera / Upload) */}
+          {/* Photo Capture Section (Multiple Smartphone Camera / Upload Photos) */}
           <div className="p-3.5 rounded-2xl bg-gray-50/80 border border-gray-200/60">
-            <label className="block text-gray-700 font-semibold mb-1.5 flex items-center justify-between">
-              <span>Fotografía del Equipo / Daño Reportado</span>
-              <span className="text-[10px] text-gray-400 font-normal">Cámara o Galería Móvil</span>
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-gray-700 font-semibold text-xs flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-black" />
+                <span>Fotografías del Equipo / Evidencias de Daño ({formData.photos.length})</span>
+              </label>
+              <span className="text-[10px] text-gray-400 font-normal">Múltiples capturas permitidas</span>
+            </div>
 
-            {formData.photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-gray-200 h-32 bg-black flex items-center justify-center">
-                <img src={formData.photoUrl} alt="Foto del equipo" className="w-full h-full object-cover" />
+            {formData.photos.length > 0 ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {formData.photos.map((photo, idx) => (
+                    <div key={idx} className="relative rounded-xl overflow-hidden border border-gray-200 h-24 bg-black group">
+                      <img src={photo} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-mono px-1.5 py-0.5 rounded">
+                        Foto {idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(idx)}
+                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                        title="Eliminar foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, photoUrl: '' })}
-                  className="absolute top-2 right-2 p-1.5 bg-black/70 text-white rounded-full hover:bg-red-600 transition-colors"
-                  title="Eliminar foto"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="w-full py-2.5 border-2 border-dashed border-gray-300 hover:border-black rounded-xl bg-white text-gray-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Camera className="w-4 h-4 text-gray-600" />
+                  <span>+ Tomar / Agregar Otra Fotografía</span>
                 </button>
               </div>
             ) : (
@@ -217,6 +259,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
               >
                 <Camera className="w-6 h-6 mb-1 text-gray-400" />
                 <span className="font-semibold text-xs">Tomar Foto con Celular o Subir de Galería</span>
+                <span className="text-[10px] text-gray-400 mt-0.5">Puedes adjuntar varias fotografías del estado del activo</span>
               </button>
             )}
 

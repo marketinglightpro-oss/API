@@ -26,9 +26,13 @@ CREATE TABLE IF NOT EXISTS public.equipment (
   technician_assigned TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   photo_url TEXT,
+  photos JSONB DEFAULT '[]'::jsonb,
   notes JSONB DEFAULT '[]'::jsonb,
   history JSONB DEFAULT '[]'::jsonb
 );
+
+-- Ensure photos column exists for existing installations
+ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
 
 -- 3. Create Activity Logs Table
 CREATE TABLE IF NOT EXISTS public.activity_logs (

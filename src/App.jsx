@@ -117,6 +117,7 @@ export default function App() {
             technicianAssigned: item.technician_assigned,
             createdAt: item.created_at,
             photoUrl: item.photo_url,
+            photos: item.photos || (item.photo_url ? [item.photo_url] : []),
             notes: item.notes || [],
             history: item.history || [],
           }));
@@ -280,13 +281,14 @@ export default function App() {
           technician_assigned: newRecord.technicianAssigned,
           created_at: newRecord.createdAt,
           photo_url: newRecord.photoUrl,
+          photos: newRecord.photos || [],
           notes: newRecord.notes,
           history: newRecord.history,
         }]);
 
         if (eqErr) {
           console.error('Error guardando equipo en Supabase:', eqErr);
-          // If insert error is related to image payload, attempt insert without photo_url
+          // If insert error is related to image payload, attempt insert without photo_url/photos
           console.warn('Reintentando guardar equipo en Supabase sin imagen...');
           await supabase.from('equipment').insert([{
             id: newRecord.id,
@@ -302,6 +304,7 @@ export default function App() {
             technician_assigned: newRecord.technicianAssigned,
             created_at: newRecord.createdAt,
             photo_url: null,
+            photos: [],
             notes: newRecord.notes,
             history: newRecord.history,
           }]);
