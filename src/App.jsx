@@ -7,6 +7,7 @@ import QRCodeModal from './components/QRCodeModal';
 import QRScannerModal from './components/QRScannerModal';
 import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
+import AuthModal from './components/AuthModal';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
@@ -14,7 +15,8 @@ import { Shield, Wrench, User, Database } from 'lucide-react';
 export default function App() {
   const [currentRole, setCurrentRole] = useState('admin'); // 'admin' | 'technician' | 'client'
   const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'register' | 'scanner' | 'logs'
-  
+  const [currentUser, setCurrentUser] = useState(null);
+
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
     const saved = localStorage.getItem('lightpro_equipment');
@@ -36,8 +38,35 @@ export default function App() {
   const [qrModalItem, setQrModalItem] = useState(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Sync with Supabase on Mount if credentials exist
+  // Supabase Auth State Listener
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // Fetch active user session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUser(user);
+        const metaRole = user.user_metadata?.role;
+        if (metaRole) setCurrentRole(metaRole);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(session.user);
+        const metaRole = session.user.user_metadata?.role;
+        if (metaRole) setCurrentRole(metaRole);
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Sync with Supabase Database Tables on Mount
   useEffect(() => {
     const fetchSupabaseData = async () => {
       if (!isSupabaseConfigured || !supabase) return;
@@ -93,10 +122,26 @@ export default function App() {
     localStorage.setItem('lightpro_logs', JSON.stringify(logs));
   }, [logs]);
 
+  // Sign out handler
+  const handleSignOut = async () => {
+    if (isSupabaseConfigured && supabase) {
+      await supabase.auth.signOut();
+    }
+    setCurrentUser(null);
+  };
+
+  // Auth Success Callback
+  const handleAuthSuccess = (user, userRole) => {
+    setCurrentUser(user);
+    if (userRole) setCurrentRole(userRole);
+  };
+
   // Handle Stage Movement
   const handleMoveStage = async (itemId, targetStageId) => {
     const stageObj = KANBAN_STAGES.find((s) => s.id === targetStageId);
-    const updatedBy = currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : 'Cliente';
+    const updatedBy = currentUser
+      ? (currentUser.user_metadata?.full_name || currentUser.email)
+      : currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : 'Cliente';
 
     const targetItem = equipmentList.find((i) => i.id === itemId);
     const newHistory = [
@@ -159,12 +204,16 @@ export default function App() {
 
   // Handle New Equipment Registration
   const handleAddEquipment = async (newRecord) => {
+    const authorName = currentUser
+      ? (currentUser.user_metadata?.full_name || currentUser.email)
+      : currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : newRecord.ownerName;
+
     setEquipmentList((prev) => [newRecord, ...prev]);
 
     const newLog = {
       id: `LOG-${Date.now()}`,
       timestamp: new Date().toISOString(),
-      user: currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : newRecord.ownerName,
+      user: authorName,
       role: currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Equipo Registrado',
       detail: `Nuevo equipo registrado: ${newRecord.name} (${newRecord.id}) - Serie: ${newRecord.serialNumber}`,
@@ -292,6 +341,9 @@ export default function App() {
             setActiveTab(tab);
           }
         }}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setShowAuthModal(true)}
+        onSignOut={handleSignOut}
       />
 
       {/* Role & Database Status Notice Banner */}
@@ -342,6 +394,13 @@ export default function App() {
       )}
 
       {/* Modals */}
+
+      {/* Supabase User Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
 
       {/* Equipment Registration Modal with Camera Photo Capture */}
       {showRegisterModal && (

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity } from 'lucide-react';
+import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogIn, LogOut } from 'lucide-react';
 
-export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab }) {
+export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onOpenAuthModal, onSignOut }) {
   const roles = [
     { id: 'admin', label: 'Admin', icon: Shield },
     { id: 'technician', label: 'Técnico', icon: Wrench },
@@ -21,7 +21,7 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
       <header className="sticky top-2 z-40 mb-4 mx-auto max-w-7xl px-3 sm:px-4">
         <div className="liquid-card rounded-2xl sm:rounded-full px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-lg border border-white/80 overflow-hidden">
           
-          {/* Brand Logo - Made larger & prominent */}
+          {/* Brand Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <img 
               src="/logo.png" 
@@ -54,9 +54,11 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
             })}
           </nav>
 
-          {/* Right Section: Role Switcher & Bell Button (With clean margins) */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 pr-1">
-            <div className="flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
+          {/* Right Section: Role Switcher, User Profile & Login */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            
+            {/* Role Switcher Pill */}
+            <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
               {roles.map((r) => {
                 const Icon = r.icon;
                 const isSelected = currentRole === r.id;
@@ -77,7 +79,31 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
               })}
             </div>
 
-            {/* Notification Bell Button */}
+            {/* Auth Login / Logout Profile Button */}
+            {currentUser ? (
+              <div className="flex items-center gap-1.5 bg-gray-100 p-1 pl-3 rounded-full text-xs font-semibold border border-gray-200">
+                <span className="text-gray-800 font-bold truncate max-w-[100px] sm:max-w-[130px]">
+                  {currentUser.user_metadata?.full_name || currentUser.email}
+                </span>
+                <button
+                  onClick={onSignOut}
+                  className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                  title="Cerrar Sesión"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="liquid-btn-primary px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Ingresar</span>
+              </button>
+            )}
+
+            {/* Notification Bell */}
             <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:shadow transition-all flex-shrink-0">
               <Bell className="w-4 h-4" />
             </button>
