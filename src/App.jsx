@@ -21,11 +21,12 @@ const isMockEquipmentId = (id) => {
     return false;
   }
   return (
-    clean.startsWith('LP-10') ||
     clean.startsWith('LP-') ||
+    clean.startsWith('LP') ||
     clean.startsWith('MOCK') ||
     clean.startsWith('TEST') ||
-    clean.startsWith('DEMO')
+    clean.startsWith('DEMO') ||
+    clean.startsWith('EQUIP-')
   );
 };
 
@@ -212,7 +213,7 @@ export default function App() {
       }
 
       const remoteIds = new Set((remoteData || []).map((i) => i.id));
-      const unSyncedItems = equipmentList.filter((localItem) => !remoteIds.has(localItem.id));
+      const unSyncedItems = equipmentList.filter((localItem) => !isMockEquipmentId(localItem.id) && !remoteIds.has(localItem.id));
 
       if (unSyncedItems.length > 0) {
         console.log(`[Auto-Sync 10s] Subiendo ${unSyncedItems.length} equipos faltantes a la nube Supabase...`);
