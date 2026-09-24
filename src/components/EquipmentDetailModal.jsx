@@ -130,29 +130,29 @@ export default function EquipmentDetailModal({
     : item.photoUrl ? [item.photoUrl] : [];
 
   return (
-    <div className="fixed inset-0 z-50 p-[15px] sm:p-[30px] bg-black/65 backdrop-blur-xl flex items-center justify-center animate-fadeIn">
-      <div className="liquid-card bg-white/95 backdrop-blur-3xl rounded-[28px] w-full h-full max-w-none max-h-none border border-white/90 shadow-2xl overflow-hidden flex flex-col relative">
+    <div className="fixed inset-0 z-50 p-2 sm:p-5 lg:p-[30px] bg-black/70 backdrop-blur-xl flex items-center justify-center animate-fadeIn">
+      <div className="liquid-card bg-white rounded-[28px] w-full h-full max-w-none max-h-none border border-gray-200 shadow-2xl overflow-hidden flex flex-col relative">
         
         {/* Jira-Style Top Navigation & Header Bar */}
-        <div className="px-6 sm:px-8 py-4 border-b border-gray-200/80 bg-white/90 backdrop-blur-md flex items-center justify-between gap-4 flex-shrink-0">
+        <div className="px-4 sm:px-8 py-4 border-b border-gray-200 bg-white flex items-center justify-between gap-3 flex-shrink-0 flex-wrap sm:flex-nowrap">
           
           {/* Left Breadcrumb & Asset Key */}
-          <div className="flex items-center gap-2.5 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <span className="font-mono font-extrabold bg-black text-white px-3 py-1 rounded-xl text-xs shadow-md">
               {item.id}
             </span>
             <span className="text-gray-300 font-bold">/</span>
-            <span className="font-mono text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200">
+            <span className="font-mono text-gray-700 bg-white px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200 shadow-xs">
               S/N: {item.serialNumber}
             </span>
             <span className="text-gray-300 font-bold hidden sm:inline">/</span>
-            <span className="hidden sm:inline-block font-semibold text-gray-700 bg-gray-100/90 px-3 py-0.5 rounded-full text-[11px] border border-gray-200">
+            <span className="hidden sm:inline-block font-semibold text-gray-700 bg-white px-3 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
               {item.category}
             </span>
           </div>
 
           {/* Right Action Bar: Status Select & Action Buttons */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 ml-auto sm:ml-0">
             
             {/* Quick Status Select Button */}
             {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') ? (
@@ -173,14 +173,14 @@ export default function EquipmentDetailModal({
 
             <button
               onClick={() => onOpenQRModal(item)}
-              className="p-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-900 transition-all shadow-sm border border-gray-200"
+              className="p-2.5 rounded-2xl bg-white hover:bg-black hover:text-white text-gray-900 transition-all shadow-sm border border-gray-200"
               title="Ver / Imprimir Etiqueta QR"
             >
               <QrCode className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-600 transition-all shadow-sm"
+              className="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white flex items-center justify-center text-gray-600 transition-all shadow-sm border border-gray-200"
               title="Cerrar Ficha"
             >
               <X className="w-4 h-4" />
@@ -189,7 +189,7 @@ export default function EquipmentDetailModal({
         </div>
 
         {/* 2-Column Jira Main Layout (Scrollable Body with 30px Padding) */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 md:p-[30px] grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-[30px]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-[30px] grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-[30px] bg-white">
           
           {/* LEFT COLUMN: Title, Description, Damage Photos & Activity Tabs (Jira Ratio ~ 68% -> lg:col-span-8) */}
           <div className="lg:col-span-8 space-y-6">
@@ -206,7 +206,7 @@ export default function EquipmentDetailModal({
               <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider">
                 Descripción de la Falla / Motivo
               </h3>
-              <div className="bg-gray-50/90 rounded-2xl p-4 border border-gray-200/80 text-xs text-gray-800 leading-relaxed font-medium shadow-inner">
+              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-xs text-gray-800 leading-relaxed font-medium shadow-sm">
                 {item.issue}
               </div>
             </div>
@@ -242,15 +242,15 @@ export default function EquipmentDetailModal({
             )}
 
             {/* Jira-Style Activity & Comments Tabbed Section */}
-            <div className="pt-4 border-t border-gray-200/80 space-y-4">
+            <div className="pt-4 border-t border-gray-200 space-y-4">
               
               {/* Activity Bar Tabs */}
-              <div className="flex items-center justify-between border-b border-gray-200/80 pb-2">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-4 flex-wrap">
                   <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
                     Actividad & Hilo de Mantenimiento
                   </h3>
-                  <div className="flex items-center bg-gray-100 p-1 rounded-xl text-xs font-semibold">
+                  <div className="flex items-center bg-white border border-gray-200 p-1 rounded-xl text-xs font-semibold shadow-xs">
                     <button
                       onClick={() => setActiveActivityTab('notes')}
                       className={`px-3 py-1 rounded-lg transition-all ${
@@ -278,7 +278,7 @@ export default function EquipmentDetailModal({
                 <div className="space-y-4">
                   
                   {/* Jira Style Comment Box */}
-                  <form onSubmit={handleAddNoteSubmit} className="bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 space-y-3 shadow-inner">
+                  <form onSubmit={handleAddNoteSubmit} className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3 shadow-sm">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
                         {(currentUser?.user_metadata?.full_name || currentUser?.email || 'U')[0].toUpperCase()}
@@ -313,11 +313,11 @@ export default function EquipmentDetailModal({
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
                           <button
                             type="button"
                             onClick={() => notePhotoInputRef.current?.click()}
-                            className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                            className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                           >
                             <Camera className="w-3.5 h-3.5 text-black" />
                             <span>Adjuntar Evidencia Foto</span>
@@ -346,17 +346,17 @@ export default function EquipmentDetailModal({
                   {/* Notes Feed */}
                   <div className="space-y-3">
                     {(!item.notes || item.notes.length === 0) ? (
-                      <p className="text-xs text-gray-400 italic p-4 bg-gray-50 rounded-2xl text-center">No hay comentarios técnicos registrados aún.</p>
+                      <p className="text-xs text-gray-400 italic p-4 bg-white border border-gray-200 rounded-2xl text-center">No hay comentarios técnicos registrados aún.</p>
                     ) : (
                       item.notes.map((note) => (
-                        <div key={note.id} className="p-4 rounded-2xl bg-gray-50/90 border border-gray-200/80 text-xs space-y-2">
+                        <div key={note.id} className="p-4 rounded-2xl bg-white border border-gray-200 text-xs space-y-2 shadow-sm">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px]">
                                 {note.author ? note.author[0].toUpperCase() : 'T'}
                               </div>
                               <span className="font-extrabold text-gray-900">{note.author}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black text-white">
                                 {note.role}
                               </span>
                             </div>
@@ -399,10 +399,10 @@ export default function EquipmentDetailModal({
               {activeActivityTab === 'history' && (
                 <div className="space-y-2">
                   {(!item.history || item.history.length === 0) ? (
-                    <p className="text-xs text-gray-400 italic p-4 bg-gray-50 rounded-2xl text-center">Sin historial de etapas.</p>
+                    <p className="text-xs text-gray-400 italic p-4 bg-white border border-gray-200 rounded-2xl text-center">Sin historial de etapas.</p>
                   ) : (
                     item.history.map((h, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 text-xs flex items-center justify-between">
+                      <div key={idx} className="p-3 rounded-xl bg-white border border-gray-200 text-xs flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                           <span className="font-bold text-gray-900">Etapa actualizada a "{KANBAN_STAGES.find(s => s.id === h.stage)?.title || h.stage}"</span>
@@ -424,9 +424,9 @@ export default function EquipmentDetailModal({
           <div className="lg:col-span-4 space-y-4">
             
             {/* Jira Structured Details Container */}
-            <div className="bg-gray-50/90 rounded-3xl p-5 border border-gray-200/90 space-y-4 text-xs shadow-sm">
+            <div className="bg-white rounded-3xl p-5 border border-gray-200 space-y-4 text-xs shadow-md">
               
-              <div className="flex items-center justify-between pb-2 border-b border-gray-200/80">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
                 <h3 className="font-extrabold text-gray-900 uppercase text-xs tracking-wider">
                   Detalles del Activo
                 </h3>
@@ -465,7 +465,7 @@ export default function EquipmentDetailModal({
                       {!teamMembers.some(m => m.full_name === 'Andrés Silva') && <option value="Andrés Silva">Andrés Silva (Administrador)</option>}
                     </select>
                   ) : (
-                    <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200">
+                    <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-xs">
                       <UserCheck className="w-4 h-4 text-gray-500" />
                       <span className="font-bold text-gray-900">{item.technicianAssigned || 'Sin asignar'}</span>
                     </div>
@@ -473,13 +473,13 @@ export default function EquipmentDetailModal({
                 </div>
 
                 {/* Prioridad */}
-                <div className="flex items-center justify-between py-1 border-t border-gray-200/60 pt-2">
+                <div className="flex items-center justify-between py-1 border-t border-gray-200 pt-2">
                   <span className="text-gray-500 font-semibold">Prioridad:</span>
                   <div>{getPriorityBadge(item.priority)}</div>
                 </div>
 
                 {/* Fecha Promesa de Reparación */}
-                <div className="space-y-1 border-t border-gray-200/60 pt-2">
+                <div className="space-y-1 border-t border-gray-200 pt-2">
                   <div className="flex items-center justify-between text-gray-500 font-semibold">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-amber-600" />
@@ -509,12 +509,12 @@ export default function EquipmentDetailModal({
                 </div>
 
                 {/* Propietario / Cliente Info Card */}
-                <div className="space-y-2 border-t border-gray-200/60 pt-3">
+                <div className="space-y-2 border-t border-gray-200 pt-3">
                   <span className="text-gray-500 font-extrabold uppercase text-[10px] tracking-wider block">
                     Propietario del Equipo
                   </span>
                   
-                  <div className="bg-white p-3 rounded-2xl border border-gray-200 space-y-1.5">
+                  <div className="bg-white p-3 rounded-2xl border border-gray-200 space-y-1.5 shadow-xs">
                     <div className="flex items-center gap-2 font-bold text-gray-900">
                       <User className="w-3.5 h-3.5 text-black" />
                       <span>{item.ownerName}</span>
@@ -537,7 +537,7 @@ export default function EquipmentDetailModal({
                 </div>
 
                 {/* Informador / Empresa Originaria */}
-                <div className="flex items-center justify-between border-t border-gray-200/60 pt-2 text-xs">
+                <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-xs">
                   <span className="text-gray-500 font-semibold">Informador:</span>
                   <div className="flex items-center gap-1.5 font-bold text-gray-900">
                     <img src="/logo.png" alt="LIGHTPRO" className="h-4 object-contain" />
