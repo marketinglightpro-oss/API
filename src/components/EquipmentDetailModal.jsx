@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck, Clock, MessageSquare, History, Tag, AlertTriangle, ChevronRight, Shield } from 'lucide-react';
+import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck, Clock, MessageSquare, History, Tag, AlertTriangle, ChevronRight, Shield, Edit3, Save, Check } from 'lucide-react';
 
 export default function EquipmentDetailModal({
   item,
@@ -11,6 +11,7 @@ export default function EquipmentDetailModal({
   onAssignTechnician,
   onSetPromisedDate,
   onAddNote,
+  onUpdateEquipment,
   onDeleteEquipment,
   onOpenQRModal,
   onClose,
@@ -20,6 +21,39 @@ export default function EquipmentDetailModal({
   const [notePhotos, setNotePhotos] = useState([]);
   const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState(null);
   const notePhotoInputRef = useRef(null);
+
+  // Edit Mode States
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name || '');
+  const [editCategory, setEditCategory] = useState(item.category || 'Audio');
+  const [editSerialNumber, setEditSerialNumber] = useState(item.serialNumber || '');
+  const [editIssue, setEditIssue] = useState(item.issue || '');
+  const [editPriority, setEditPriority] = useState(item.priority || 'Media');
+  const [editOwnerName, setEditOwnerName] = useState(item.ownerName || '');
+  const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
+  const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
+
+  const handleSaveEdit = () => {
+    if (!editName.trim() || !editSerialNumber.trim() || !editOwnerName.trim() || !editIssue.trim()) {
+      alert('Por favor completa todos los campos obligatorios (Nombre, Serie, Propietario y Falla).');
+      return;
+    }
+
+    if (onUpdateEquipment) {
+      onUpdateEquipment(item.id, {
+        name: editName.trim(),
+        category: editCategory,
+        serialNumber: editSerialNumber.trim(),
+        issue: editIssue.trim(),
+        priority: editPriority,
+        ownerName: editOwnerName.trim(),
+        ownerPhone: editOwnerPhone.trim(),
+        ownerEmail: editOwnerEmail.trim(),
+      });
+    }
+
+    setIsEditing(false);
+  };
 
   const currentStage = KANBAN_STAGES.find((s) => s.id === item.status) || KANBAN_STAGES[0];
 
@@ -143,13 +177,43 @@ export default function EquipmentDetailModal({
               {item.id}
             </span>
             <span className="text-gray-300 font-bold">/</span>
-            <span className="font-mono text-gray-700 bg-white px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200 shadow-xs">
-              S/N: {item.serialNumber}
-            </span>
-            <span className="text-gray-300 font-bold hidden sm:inline">/</span>
-            <span className="hidden sm:inline-block font-semibold text-gray-700 bg-white px-3 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
-              {item.category}
-            </span>
+            {isEditing ? (
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] font-bold text-gray-400">S/N:</span>
+                <input
+                  type="text"
+                  value={editSerialNumber}
+                  onChange={(e) => setEditSerialNumber(e.target.value)}
+                  className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 font-mono text-xs font-bold text-gray-900 focus:ring-2 focus:ring-black"
+                  placeholder="Número de Serie"
+                  required
+                />
+              </div>
+            ) : (
+              <span className="font-mono text-gray-700 bg-white px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200 shadow-xs">
+                S/N: {item.serialNumber}
+              </span>
+            )}
+            <span className="text-gray-300 font-bold">/</span>
+            {isEditing ? (
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-black"
+              >
+                <option value="Audio">Audio</option>
+                <option value="Iluminación">Iluminación</option>
+                <option value="Video">Video</option>
+                <option value="Energía">Energía</option>
+                <option value="Rigging">Rigging</option>
+                <option value="Estructura">Estructura</option>
+                <option value="General">General</option>
+              </select>
+            ) : (
+              <span className="hidden sm:inline-block font-semibold text-gray-700 bg-white px-3 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
+                {item.category}
+              </span>
+            )}
           </div>
 
           {/* Right Action Bar: Status Select & Action Buttons */}
@@ -180,7 +244,48 @@ export default function EquipmentDetailModal({
               <QrCode className="w-4 h-4" />
             </button>
 
-            {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && (
+            {(currentRole === 'super_admin' || currentRole === 'admin') && (
+              isEditing ? (
+                <>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md flex items-center gap-1.5 text-xs font-bold animate-pulse"
+                    title="Guardar Cambios de la Ficha"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Guardar Ficha</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditName(item.name || '');
+                      setEditCategory(item.category || 'Audio');
+                      setEditSerialNumber(item.serialNumber || '');
+                      setEditIssue(item.issue || '');
+                      setEditPriority(item.priority || 'Media');
+                      setEditOwnerName(item.ownerName || '');
+                      setEditOwnerPhone(item.ownerPhone || '');
+                      setEditOwnerEmail(item.ownerEmail || '');
+                    }}
+                    className="p-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all shadow-xs text-xs font-bold"
+                    title="Cancelar Edición"
+                  >
+                    <span>Cancelar</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="p-2.5 rounded-2xl bg-black hover:bg-gray-800 text-white transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold"
+                  title="Editar Ficha de Equipo (Exclusivo Admin / Super Admin)"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Editar Ficha</span>
+                </button>
+              )
+            )}
+
+            {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && !isEditing && (
               <button
                 onClick={() => onDeleteEquipment(item.id)}
                 className="p-2.5 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white text-red-600 transition-all shadow-sm border border-red-200 flex items-center gap-1.5 text-xs font-bold"
@@ -209,19 +314,46 @@ export default function EquipmentDetailModal({
             
             {/* Asset Title */}
             <div>
-              <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-snug">
-                {item.name}
-              </h1>
+              {isEditing ? (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
+                    Nombre del Equipo / Marca & Modelo *
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-2.5 text-lg sm:text-2xl font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs"
+                    placeholder="Ej. Consola Midas M32"
+                    required
+                  />
+                </div>
+              ) : (
+                <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-snug">
+                  {item.name}
+                </h1>
+              )}
             </div>
 
             {/* Description / Reported Issue Box */}
             <div className="space-y-2">
               <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-wider">
-                Descripción de la Falla / Motivo
+                Descripción de la Falla / Motivo de Ingreso
               </h3>
-              <div className="bg-white rounded-2xl p-4 border border-gray-200 text-xs text-gray-800 leading-relaxed font-medium shadow-sm">
-                {item.issue}
-              </div>
+              {isEditing ? (
+                <textarea
+                  rows={3}
+                  value={editIssue}
+                  onChange={(e) => setEditIssue(e.target.value)}
+                  className="w-full bg-white rounded-2xl p-3 border border-gray-300 text-xs text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-black shadow-xs"
+                  placeholder="Detalla los problemas o fallas..."
+                  required
+                />
+              ) : (
+                <div className="bg-white rounded-2xl p-4 border border-gray-200 text-xs text-gray-800 leading-relaxed font-medium shadow-sm">
+                  {item.issue}
+                </div>
+              )}
             </div>
 
             {/* Equipment Damage Photos Section */}
@@ -488,7 +620,19 @@ export default function EquipmentDetailModal({
                 {/* Prioridad */}
                 <div className="flex items-center justify-between py-1 border-t border-gray-200 pt-2">
                   <span className="text-gray-500 font-semibold">Prioridad:</span>
-                  <div>{getPriorityBadge(item.priority)}</div>
+                  {isEditing ? (
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value)}
+                      className="bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="Urgente">Urgente</option>
+                      <option value="Media">Media</option>
+                      <option value="Baja">Baja</option>
+                    </select>
+                  ) : (
+                    <div>{getPriorityBadge(item.priority)}</div>
+                  )}
                 </div>
 
                 {/* Fecha Promesa de Reparación */}
@@ -521,32 +665,78 @@ export default function EquipmentDetailModal({
                   )}
                 </div>
 
-                {/* Propietario / Cliente Info Card */}
+                {/* Propietario / Cliente / Colaborador Info Card */}
                 <div className="space-y-2 border-t border-gray-200 pt-3">
                   <span className="text-gray-500 font-extrabold uppercase text-[10px] tracking-wider block">
-                    Propietario del Equipo
+                    {isEditing ? 'Editar Datos del Propietario / Colaborador' : 'Propietario del Equipo'}
                   </span>
                   
-                  <div className="bg-white p-3 rounded-2xl border border-gray-200 space-y-1.5 shadow-xs">
-                    <div className="flex items-center gap-2 font-bold text-gray-900">
-                      <User className="w-3.5 h-3.5 text-black" />
-                      <span>{item.ownerName}</span>
+                  {isEditing ? (
+                    <div className="bg-white p-3 rounded-2xl border border-gray-300 space-y-2 shadow-xs">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Nombre del Colaborador / Cliente *</label>
+                        <div className="relative">
+                          <User className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400" />
+                          <input
+                            type="text"
+                            value={editOwnerName}
+                            onChange={(e) => setEditOwnerName(e.target.value)}
+                            className="w-full bg-white border border-gray-300 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Teléfono / WhatsApp</label>
+                        <div className="relative">
+                          <Phone className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400" />
+                          <input
+                            type="tel"
+                            value={editOwnerPhone}
+                            onChange={(e) => setEditOwnerPhone(e.target.value)}
+                            placeholder="+57 300 000 0000"
+                            className="w-full bg-white border border-gray-300 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-mono font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">Correo Electrónico</label>
+                        <div className="relative">
+                          <Mail className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400" />
+                          <input
+                            type="email"
+                            value={editOwnerEmail}
+                            onChange={(e) => setEditOwnerEmail(e.target.value)}
+                            placeholder="cliente@email.com"
+                            className="w-full bg-white border border-gray-300 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-mono font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                          />
+                        </div>
+                      </div>
                     </div>
-
-                    {item.ownerPhone && (
-                      <div className="flex items-center gap-2 text-gray-600 font-mono text-[11px]">
-                        <Phone className="w-3 h-3 text-gray-400" />
-                        <span>{item.ownerPhone}</span>
+                  ) : (
+                    <div className="bg-white p-3 rounded-2xl border border-gray-200 space-y-1.5 shadow-xs">
+                      <div className="flex items-center gap-2 font-bold text-gray-900">
+                        <User className="w-3.5 h-3.5 text-black" />
+                        <span>{item.ownerName}</span>
                       </div>
-                    )}
 
-                    {item.ownerEmail && (
-                      <div className="flex items-center gap-2 text-gray-600 truncate font-mono text-[11px]">
-                        <Mail className="w-3 h-3 text-gray-400" />
-                        <span className="truncate">{item.ownerEmail}</span>
-                      </div>
-                    )}
-                  </div>
+                      {item.ownerPhone && (
+                        <div className="flex items-center gap-2 text-gray-600 font-mono text-[11px]">
+                          <Phone className="w-3 h-3 text-gray-400" />
+                          <span>{item.ownerPhone}</span>
+                        </div>
+                      )}
+
+                      {item.ownerEmail && (
+                        <div className="flex items-center gap-2 text-gray-600 truncate font-mono text-[11px]">
+                          <Mail className="w-3 h-3 text-gray-400" />
+                          <span className="truncate">{item.ownerEmail}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Informador / Empresa Originaria */}

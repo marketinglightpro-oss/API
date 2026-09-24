@@ -634,6 +634,62 @@ export default function App() {
     }
   };
 
+  // Handle Equipment Record Details Update (Exclusive to Super Admin & Admin)
+  const handleUpdateEquipment = async (itemId, updatedFields) => {
+    setEquipmentList((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, ...updatedFields } : item))
+    );
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem((prev) => ({ ...prev, ...updatedFields }));
+    }
+
+    const authorName = currentUser
+      ? (currentUser.user_metadata?.full_name || currentUser.email)
+      : 'Administrador';
+
+    const newLog = {
+      id: `LOG-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      user: authorName,
+      role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
+      action: 'Ficha Actualizada',
+      detail: `Ficha de equipo ${updatedFields.name || itemId} fue actualizada por ${authorName}.`,
+    };
+    setLogs((prev) => [newLog, ...prev]);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const dbPayload = {
+          name: updatedFields.name,
+          category: updatedFields.category,
+          serial_number: updatedFields.serialNumber,
+          owner_name: updatedFields.ownerName,
+          owner_phone: updatedFields.ownerPhone || null,
+          owner_email: updatedFields.ownerEmail || null,
+          issue: updatedFields.issue,
+          priority: updatedFields.priority,
+        };
+
+        const { error: updErr } = await supabase.from('equipment').update(dbPayload).eq('id', itemId);
+        if (updErr) {
+          console.error('Error actualizando equipo en Supabase:', updErr);
+        }
+
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error enviando actualización a Supabase:', err);
+      }
+    }
+  };
+
   // Handle Technical Note Addition
   const handleAddNote = async (itemId, note) => {
     let updatedNotes = [];
@@ -877,6 +933,7 @@ export default function App() {
           onAssignTechnician={handleAssignTechnician}
           onSetPromisedDate={handleSetPromisedDate}
           onAddNote={handleAddNote}
+          onUpdateEquipment={handleUpdateEquipment}
           onDeleteEquipment={handleDeleteEquipment}
           onOpenQRModal={(item) => {
             setSelectedItem(null);
