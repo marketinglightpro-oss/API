@@ -19,13 +19,6 @@ export default function Header({
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const roles = [
-    { id: 'super_admin', label: 'Super Admin', icon: Shield },
-    { id: 'admin', label: 'Admin', icon: Shield },
-    { id: 'technician', label: 'Técnico', icon: Wrench },
-    { id: 'client', label: 'Cliente', icon: User },
-  ];
-
   const allTabs = [
     { id: 'reparaciones', label: 'Reparaciones', icon: LayoutGrid },
     { id: 'equipos', label: 'Equipos / Personal', icon: Users, roles: ['super_admin', 'admin'] },
@@ -94,27 +87,15 @@ export default function Header({
               </button>
             )}
 
-            {/* Role Switcher Pill */}
-            <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
-
-              {roles.map((r) => {
-                const Icon = r.icon;
-                const isSelected = currentRole === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => setCurrentRole(r.id)}
-                    className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all text-[10px] sm:text-xs font-medium ${
-                      isSelected
-                        ? 'bg-black text-white shadow-sm font-semibold'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="w-3 h-3" />
-                    <span>{r.label}</span>
-                  </button>
-                );
-              })}
+            {/* Registered User Role Badge (Read-Only) */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-black text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border border-gray-800">
+              {currentRole === 'super_admin' && <Shield className="w-3.5 h-3.5 text-amber-400" />}
+              {currentRole === 'admin' && <Shield className="w-3.5 h-3.5 text-purple-400" />}
+              {currentRole === 'technician' && <Wrench className="w-3.5 h-3.5 text-blue-400" />}
+              {currentRole === 'client' && <User className="w-3.5 h-3.5 text-emerald-400" />}
+              <span>
+                {currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente'}
+              </span>
             </div>
 
             {/* Auth User Profile Badge & Logout Button */}
