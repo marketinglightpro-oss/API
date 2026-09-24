@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { Users, UserPlus, Shield, Wrench, User, Trash2, CheckCircle2, Plus, Copy, Eye, EyeOff, RefreshCw, Key, Search, Phone, Mail, Sparkles, AlertCircle } from 'lucide-react';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export default function UserManagementView({ currentUser, currentRole = 'super_admin', teamMembers = [], onUpdateTeamMembers }) {
   const [users, setUsers] = useState(teamMembers || []);
@@ -79,8 +83,18 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
 
     if (isSupabaseConfigured && supabase) {
       try {
+        // Isolated temporary Supabase client with persistSession: false
+        // so signUp() does NOT mutate the current Admin session or trigger onAuthStateChange!
+        const tempSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        });
+
         // 1. Attempt Supabase Auth Sign Up
-        const { data: authData, error: signUpErr } = await supabase.auth.signUp({
+        const { data: authData, error: signUpErr } = await tempSupabase.auth.signUp({
           email: email.trim(),
           password: password.trim(),
           options: {
@@ -215,8 +229,24 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
     if (isSupabaseConfigured && supabase) {
       try {
         console.log(`[Super Admin Reset] Actualizando clave para ${resetTargetUser.email}...`);
+
+        // 1. Attempt RPC call to update password directly in auth.users if function exists
+        const { error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
+          target_user_id: resetTargetUser.id,
+          new_password: resetPasswordText.trim(),
+        });
+
+        if (rpcErr) {
+          console.warn('Notice RPC admin_reset_user_password:', rpcErr);
+        }
+
+        // 2. Send password reset email link via Supabase Auth
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetTargetUser.email);
+        if (resetErr) {
+          console.warn('Notice sending reset password email:', resetErr);
+        }
       } catch (err) {
-        console.warn('Notice resetting password:', err);
+        console.warn('Error resetting password in Supabase:', err);
       }
     }
 
