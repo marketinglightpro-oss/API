@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { Users, UserPlus, Shield, Wrench, User, Trash2, Key, CheckCircle2, AlertCircle, Plus, Lock } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, User, Trash2, CheckCircle2, Plus } from 'lucide-react';
 
 export default function UserManagementView({ currentUser }) {
   const [users, setUsers] = useState([
-    { id: 'usr-1', full_name: 'Super Admin Principal', email: 'superadmin@lightpro.com', role: 'super_admin', created_at: new Date().toISOString() },
+    { id: 'usr-1', full_name: 'Super Admin Principal', email: 'light.pro01@hotmail.com', role: 'super_admin', created_at: new Date().toISOString() },
     { id: 'usr-2', full_name: 'Carlos Mendoza', email: 'carlos.mendoza@lightpro.com', role: 'technician', created_at: new Date().toISOString() },
     { id: 'usr-3', full_name: 'David Ruiz', email: 'david.ruiz@lightpro.com', role: 'technician', created_at: new Date().toISOString() },
     { id: 'usr-4', full_name: 'Producciones Eventos Global S.A.', email: 'contacto@eventosglobal.co', role: 'client', created_at: new Date().toISOString() },
@@ -17,7 +17,6 @@ export default function UserManagementView({ currentUser }) {
   const [role, setRole] = useState('technician');
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
   // Fetch Profiles from Supabase
@@ -38,7 +37,6 @@ export default function UserManagementView({ currentUser }) {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    setError('');
     setMessage('');
     setLoading(true);
 
@@ -87,6 +85,17 @@ export default function UserManagementView({ currentUser }) {
     }, 1500);
   };
 
+  const handleUpdateRole = async (userId, newRole) => {
+    setUsers((prev) => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const handleDeleteUser = async (userId) => {
     if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
     setUsers((prev) => prev.filter((u) => u.id !== userId));
@@ -102,19 +111,19 @@ export default function UserManagementView({ currentUser }) {
   const getRoleBadge = (r) => {
     switch (r) {
       case 'super_admin':
-        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1"><Shield className="w-3 h-3 text-amber-600" /> Super Admin</span>;
+        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 w-fit"><Shield className="w-3 h-3 text-amber-600" /> Super Admin</span>;
       case 'admin':
-        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1"><Shield className="w-3 h-3 text-purple-600" /> Administrador</span>;
+        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1 w-fit"><Shield className="w-3 h-3 text-purple-600" /> Administrador</span>;
       case 'technician':
-        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1"><Wrench className="w-3 h-3 text-blue-600" /> Técnico</span>;
+        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1 w-fit"><Wrench className="w-3 h-3 text-blue-600" /> Técnico</span>;
       default:
-        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 border border-gray-200 flex items-center gap-1"><User className="w-3 h-3 text-gray-600" /> Cliente</span>;
+        return <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 border border-gray-200 flex items-center gap-1 w-fit"><User className="w-3 h-3 text-gray-600" /> Cliente</span>;
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 mb-12">
-      <div className="liquid-card rounded-3xl p-6 sm:p-8 bg-white border border-gray-200/80 shadow-md">
+    <div className="w-full px-3 sm:px-6 md:px-8 mb-12">
+      <div className="liquid-card rounded-3xl p-6 sm:p-8 bg-white border border-gray-200/80 shadow-md w-full">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200/80">
@@ -125,9 +134,9 @@ export default function UserManagementView({ currentUser }) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Gestión de Usuarios del Sistema</h2>
-                <span className="text-[10px] font-bold uppercase bg-amber-400 text-black px-2 py-0.5 rounded-full">Exclusivo Super Admin</span>
+                <span className="text-[10px] font-bold uppercase bg-amber-400 text-black px-2.5 py-0.5 rounded-full">Exclusivo Super Admin</span>
               </div>
-              <p className="text-xs text-gray-500">Creación de credenciales, roles y permisos centralizados con Supabase</p>
+              <p className="text-xs text-gray-500">Creación de credenciales, asignación de roles y permisos centralizados con Supabase</p>
             </div>
           </div>
 
@@ -141,14 +150,15 @@ export default function UserManagementView({ currentUser }) {
         </div>
 
         {/* Users Table */}
-        <div className="mt-6 overflow-x-auto">
+        <div className="mt-6 overflow-x-auto w-full">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-gray-200 text-gray-400 font-bold uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-3">Nombre Completo</th>
                 <th className="py-3 px-3">Correo Electrónico</th>
-                <th className="py-3 px-3">Rol & Permisos</th>
-                <th className="py-3 px-3">Fecha de Creación</th>
+                <th className="py-3 px-3">Rol & Permisos Actuales</th>
+                <th className="py-3 px-3">Cambiar Rol</th>
+                <th className="py-3 px-3">Fecha</th>
                 <th className="py-3 px-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -158,6 +168,18 @@ export default function UserManagementView({ currentUser }) {
                   <td className="py-3.5 px-3 font-bold text-gray-900">{u.full_name}</td>
                   <td className="py-3.5 px-3 text-gray-600 font-mono">{u.email}</td>
                   <td className="py-3.5 px-3">{getRoleBadge(u.role)}</td>
+                  <td className="py-3.5 px-3">
+                    <select
+                      value={u.role}
+                      onChange={(e) => handleUpdateRole(u.id, e.target.value)}
+                      className="bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="super_admin">Super Admin</option>
+                      <option value="admin">Administrador</option>
+                      <option value="technician">Técnico</option>
+                      <option value="client">Cliente</option>
+                    </select>
+                  </td>
                   <td className="py-3.5 px-3 text-gray-400 font-mono text-[11px]">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
@@ -180,7 +202,7 @@ export default function UserManagementView({ currentUser }) {
 
       </div>
 
-      {/* Modal Crear Usuario (Super Admin) */}
+      {/* Modal Crear Usuario */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
           <div className="liquid-card bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-white/80 shadow-2xl relative">
@@ -247,12 +269,12 @@ export default function UserManagementView({ currentUser }) {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black font-semibold"
                 >
-                  <option value="technician">Técnico (Actualizar Kanban, notas y QR)</option>
-                  <option value="admin">Administrador (Configuración y borrado)</option>
-                  <option value="client">Cliente (Registrar y rastrear equipos)</option>
                   <option value="super_admin">Super Admin (Control Total de Usuarios)</option>
+                  <option value="admin">Administrador (Configuración y borrado)</option>
+                  <option value="technician">Técnico (Actualizar Kanban, notas y QR)</option>
+                  <option value="client">Cliente (Registrar y rastrear equipos)</option>
                 </select>
               </div>
 

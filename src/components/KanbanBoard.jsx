@@ -48,13 +48,13 @@ export default function KanbanBoard({
   const handleDrop = (e, targetStageId) => {
     e.preventDefault();
     const itemId = e.dataTransfer.getData('text/plain');
-    if (itemId && (currentRole === 'admin' || currentRole === 'technician')) {
+    if (itemId && (currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician')) {
       onMoveStage(itemId, targetStageId);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 mb-20 md:mb-12">
+    <div className="w-full px-3 sm:px-6 md:px-8 mb-20 md:mb-12">
       
       {/* Mobile Stage Selector Strip (Visible on mobile screens) */}
       <div className="lg:hidden mb-4 overflow-x-auto pb-1 flex items-center gap-2 scrollbar-none">
@@ -81,8 +81,8 @@ export default function KanbanBoard({
         })}
       </div>
 
-      {/* Grid Container */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+      {/* Grid Container - Full Screen Fluid Width for maximum card room */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start w-full">
         {KANBAN_STAGES.map((stage) => {
           const itemsInStage = equipmentList.filter((item) => item.status === stage.id);
           const isVisibleOnMobile = activeMobileStage === stage.id;
@@ -92,7 +92,7 @@ export default function KanbanBoard({
               key={stage.id}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.id)}
-              className={`bg-white/70 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 border border-gray-200/70 shadow-sm min-h-[300px] lg:min-h-[500px] flex-col transition-all hover:border-gray-300 ${
+              className={`bg-white/70 backdrop-blur-md rounded-3xl p-3.5 sm:p-4 border border-gray-200/70 shadow-sm min-h-[300px] lg:min-h-[550px] flex-col transition-all hover:border-gray-300 w-full ${
                 isVisibleOnMobile ? 'flex' : 'hidden lg:flex'
               }`}
             >
@@ -108,7 +108,7 @@ export default function KanbanBoard({
               </div>
 
               {/* Items List */}
-              <div className="space-y-3 flex-1 overflow-y-auto max-h-[700px] pr-0.5">
+              <div className="space-y-3 flex-1 overflow-y-auto max-h-[750px] pr-0.5">
                 {itemsInStage.length === 0 ? (
                   <div className="h-32 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-3">
                     <p className="text-xs text-gray-400 font-medium">Sin equipos en esta etapa</p>
@@ -118,9 +118,9 @@ export default function KanbanBoard({
                   itemsInStage.map((item) => (
                     <div
                       key={item.id}
-                      draggable={currentRole === 'admin' || currentRole === 'technician'}
+                      draggable={currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician'}
                       onDragStart={(e) => handleDragStart(e, item)}
-                      className="liquid-card bg-white rounded-2xl p-3.5 sm:p-4 border border-gray-200/80 shadow-sm hover:shadow-md hover:border-gray-300 transition-all group relative cursor-pointer"
+                      className="liquid-card bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm hover:shadow-md hover:border-gray-300 transition-all group relative cursor-pointer w-full"
                     >
                       {/* Top Header: ID & Priority */}
                       <div className="flex items-center justify-between mb-2">
@@ -185,7 +185,7 @@ export default function KanbanBoard({
                         </div>
 
                         {/* Quick Stage Advance */}
-                        {(currentRole === 'admin' || currentRole === 'technician') && (
+                        {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') && (
                           <div className="flex items-center gap-1">
                             {stage.step > 1 && (
                               <button

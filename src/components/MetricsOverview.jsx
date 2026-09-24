@@ -10,10 +10,10 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
   const categories = ['Todos', 'Audio', 'Iluminación', 'Rigging', 'Video', 'Energía'];
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 mb-4 sm:mb-6 space-y-4 sm:space-y-6">
+    <div className="w-full px-3 sm:px-6 md:px-8 mb-4 sm:mb-6 space-y-4 sm:space-y-6">
       
-      {/* Liquid Hero Banner */}
-      <div className="liquid-card rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 relative overflow-hidden">
+      {/* Liquid Hero Banner - Full Fluid Width */}
+      <div className="liquid-card rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-8 relative overflow-hidden w-full">
         <div className="absolute -right-16 -top-16 w-64 h-64 bg-gradient-to-br from-gray-200/40 to-white/0 rounded-full blur-2xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 relative z-10">
@@ -30,14 +30,14 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
             </p>
           </div>
 
-          {/* Quick Action Buttons for Mobile / Desktop */}
+          {/* Quick Action Buttons */}
           <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={onOpenRegister}
               className="liquid-btn-primary px-3 sm:px-6 py-2.5 sm:py-3 rounded-full flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold w-full sm:w-auto"
             >
               <PlusCircle className="w-4 h-4 flex-shrink-0" />
-              <span>Registrar</span>
+              <span>Registrar Equipo</span>
             </button>
             <button
               onClick={onOpenScanner}
@@ -49,8 +49,8 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
           </div>
         </div>
 
-        {/* Quick Stat Bar Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200/60">
+        {/* Quick Stat Bar Grid - Full Width */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200/60 w-full">
           <div className="bg-white/70 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2.5 sm:gap-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
               <Package className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -93,8 +93,8 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="liquid-card rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* Filter & Search Bar - Full Width */}
+      <div className="liquid-card rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
         {/* Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
           {categories.map((cat) => {
@@ -116,14 +116,14 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
         </div>
 
         {/* Search Input */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-80">
           <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por equipo, serie, cliente..."
-            className="w-full bg-white/90 border border-gray-200 rounded-full pl-9 pr-4 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-black transition-all shadow-inner"
+            className="w-full bg-white/90 border border-gray-200 rounded-full pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black transition-all shadow-inner"
           />
         </div>
       </div>

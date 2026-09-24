@@ -16,19 +16,19 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
     { id: 'logs', label: 'Historial', icon: Activity },
   ];
 
-  // If Super Admin, add User Management tab
-  if (currentRole === 'super_admin') {
+  // If Super Admin or Admin, add User Management tab
+  if (currentRole === 'super_admin' || currentRole === 'admin') {
     tabs.push({ id: 'users', label: 'Usuarios', icon: Users });
   }
 
   return (
     <>
-      {/* Top Header */}
-      <header className="sticky top-2 z-40 mb-4 mx-auto max-w-7xl px-3 sm:px-4">
-        <div className="liquid-card rounded-2xl sm:rounded-full px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-lg border border-white/80 overflow-hidden">
+      {/* Top Header - Full Fluid Width Layout */}
+      <header className="sticky top-2 z-40 mb-4 w-full px-3 sm:px-6 md:px-8">
+        <div className="liquid-card rounded-2xl sm:rounded-full px-4 sm:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 shadow-lg border border-white/80 overflow-hidden w-full">
           
-          {/* Brand Logo */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Brand Logo & QR Badge */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <img 
               src="/logo.png" 
               alt="LIGHT PRO" 
@@ -63,7 +63,7 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
           {/* Right Section: Role Indicator, User Profile & Logout */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             
-            {/* Role Indicator Pill */}
+            {/* Role Switcher Pill */}
             <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
               {roles.map((r) => {
                 const Icon = r.icon;
@@ -88,7 +88,7 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
             {/* Auth User Profile Badge & Logout Button */}
             {currentUser && (
               <div className="flex items-center gap-1.5 bg-gray-100 p-1 pl-3 rounded-full text-xs font-semibold border border-gray-200">
-                <span className="text-gray-800 font-bold truncate max-w-[100px] sm:max-w-[130px]">
+                <span className="text-gray-800 font-bold truncate max-w-[120px] sm:max-w-[160px]">
                   {currentUser.user_metadata?.full_name || currentUser.email}
                 </span>
                 <button

@@ -1,4 +1,4 @@
--- LIGHTPRO COMPLETE SQL SCHEMA FOR SUPABASE (SUPER ADMIN + USER MANAGEMENT)
+-- LIGHTPRO COMPLETE SQL SCHEMA FOR SUPABASE (SUPER ADMIN + ROLES REPAIR)
 -- Run this script in your Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql)
 
 -- 1. Create Profiles Table (Linked to Supabase Auth)
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'technician', -- 'super_admin' | 'admin' | 'technician' | 'client'
+  role TEXT NOT NULL DEFAULT 'super_admin', -- 'super_admin' | 'admin' | 'technician' | 'client'
   phone TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -85,9 +85,11 @@ BEGIN
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'full_name', new.email),
-    COALESCE(new.raw_user_meta_data->>'role', 'technician')
+    COALESCE(new.raw_user_meta_data->>'role', 'super_admin')
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    role = EXCLUDED.role,
+    full_name = EXCLUDED.full_name;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
