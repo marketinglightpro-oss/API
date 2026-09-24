@@ -3,12 +3,7 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { Users, UserPlus, Shield, Wrench, User, Trash2, CheckCircle2, Plus, Copy, Eye, EyeOff, RefreshCw, Key, Search, Phone, Mail, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function UserManagementView({ currentUser, teamMembers = [], onUpdateTeamMembers }) {
-  const [users, setUsers] = useState([
-    { id: 'usr-1', full_name: 'Stivens', email: 'light.pro01@hotmail.com', role: 'super_admin', phone: '+57 300 000 0000', created_at: new Date().toISOString() },
-    { id: 'usr-2', full_name: 'Carlos Mendoza', email: 'carlos.mendoza@lightpro.com', role: 'technician', phone: '+57 311 222 3333', created_at: new Date().toISOString() },
-    { id: 'usr-3', full_name: 'Andrés Silva', email: 'andres.silva@lightpro.com', role: 'admin', phone: '+57 320 444 5555', created_at: new Date().toISOString() },
-    { id: 'usr-4', full_name: 'Producciones Eventos Global S.A.', email: 'contacto@eventosglobal.co', role: 'client', phone: '+57 315 888 9999', created_at: new Date().toISOString() },
-  ]);
+  const [users, setUsers] = useState(teamMembers || []);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [fullName, setFullName] = useState('');

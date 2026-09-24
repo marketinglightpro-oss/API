@@ -34,35 +34,13 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
 
-  // Team Members / Staff State
-  const [teamMembers, setTeamMembers] = useState([
-    { id: '1', full_name: 'Carlos Mendoza', role: 'technician', email: 'carlos@lightpro.com' },
-    { id: '2', full_name: 'Andrés Silva', role: 'admin', email: 'andres@lightpro.com' },
-    { id: '3', full_name: 'Stivens', role: 'super_admin', email: 'light.pro01@hotmail.com' },
-    { id: '4', full_name: 'Mariana Gómez', role: 'technician', email: 'mariana@lightpro.com' },
-  ]);
+  // Team Members / Staff State (Synced dynamically with Supabase profiles)
+  const [teamMembers, setTeamMembers] = useState([]);
 
   // Live Bell Notifications State
   const [notifications, setNotifications] = useState(() => {
     const saved = localStorage.getItem('lightpro_notifications');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'N-1',
-        title: 'Equipo Asignado',
-        detail: 'Cabina JBL (EQ-3958) fue asignada a Carlos Mendoza (Técnico)',
-        timestamp: new Date().toISOString(),
-        read: false,
-        equipmentId: 'EQ-3958',
-      },
-      {
-        id: 'N-2',
-        title: 'Promesa de Reparación',
-        detail: 'Cabina JBL (EQ-3958) tiene fecha estimada de entrega para el 26/09/2026',
-        timestamp: new Date().toISOString(),
-        read: false,
-        equipmentId: 'EQ-3958',
-      }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Filter States

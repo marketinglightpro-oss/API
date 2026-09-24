@@ -52,16 +52,6 @@ export default function LoginScreen({ onLoginSuccess }) {
     }
   };
 
-  // Demo Login Quick-Select Handler
-  const handleQuickDemoLogin = (roleType, defaultEmail, name) => {
-    const demoUser = {
-      id: `usr_demo_${roleType}`,
-      email: defaultEmail,
-      user_metadata: { full_name: name, role: roleType },
-    };
-    onLoginSuccess(demoUser, roleType);
-  };
-
   return (
     <div className="min-h-screen bg-[#F2F3F7] flex items-center justify-center p-4 relative overflow-hidden font-poppins selection:bg-black selection:text-white">
       {/* Background Decorative Gradients */}
@@ -137,43 +127,6 @@ export default function LoginScreen({ onLoginSuccess }) {
             <span>{loading ? 'Verificando...' : 'Ingresar al Sistema'}</span>
           </button>
         </form>
-
-        {/* Demo Roles Quick Login Switcher */}
-        <div className="mt-8 pt-6 border-t border-gray-200/80">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center mb-3">
-            O Probar Acceso Rápido por Rol (Demostración):
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleQuickDemoLogin('super_admin', 'superadmin@lightpro.com', 'Super Admin Principal')}
-              className="p-2.5 rounded-xl bg-gray-900 hover:bg-black text-white text-[10px] font-bold flex items-center gap-1.5 transition-all"
-            >
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
-              <span>Super Admin</span>
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('admin', 'admin@lightpro.com', 'Usuario Admin')}
-              className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold flex items-center gap-1.5 transition-all border border-gray-200"
-            >
-              <UserCheck className="w-3.5 h-3.5 text-black" />
-              <span>Administrador</span>
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('technician', 'tecnico@lightpro.com', 'Carlos Mendoza (Técnico)')}
-              className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold flex items-center gap-1.5 transition-all border border-gray-200"
-            >
-              <Wrench className="w-3.5 h-3.5 text-amber-600" />
-              <span>Técnico</span>
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('client', 'cliente@eventosglobal.com', 'Producciones Eventos S.A.')}
-              className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold flex items-center gap-1.5 transition-all border border-gray-200"
-            >
-              <User className="w-3.5 h-3.5 text-blue-600" />
-              <span>Cliente</span>
-            </button>
-          </div>
-        </div>
 
       </div>
 
