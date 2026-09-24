@@ -585,6 +585,55 @@ export default function App() {
     }
   };
 
+  // Handle Equipment Record Deletion (Exclusive to Super Admin & Admin)
+  const handleDeleteEquipment = async (itemId) => {
+    const targetItem = equipmentList.find((i) => i.id === itemId);
+    if (!targetItem) return;
+
+    if (!confirm(`¿Estás seguro de eliminar permanentemente la ficha de este equipo?\n\nEquipo: ${targetItem.name}\nID: ${itemId}`)) {
+      return;
+    }
+
+    setEquipmentList((prev) => prev.filter((i) => i.id !== itemId));
+
+    if (selectedItem && selectedItem.id === itemId) {
+      setSelectedItem(null);
+    }
+
+    const authorName = currentUser
+      ? (currentUser.user_metadata?.full_name || currentUser.email)
+      : 'Administrador';
+
+    const newLog = {
+      id: `LOG-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      user: authorName,
+      role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
+      action: 'Equipo Eliminado',
+      detail: `Ficha de equipo ${targetItem.name} (${itemId}) eliminada permanentemente.`,
+    };
+    setLogs((prev) => [newLog, ...prev]);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error: delErr } = await supabase.from('equipment').delete().eq('id', itemId);
+        if (delErr) {
+          console.error('Error eliminando equipo de Supabase:', delErr);
+        }
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error enviando borrado a Supabase:', err);
+      }
+    }
+  };
+
   // Handle Technical Note Addition
   const handleAddNote = async (itemId, note) => {
     let updatedNotes = [];
@@ -745,6 +794,7 @@ export default function App() {
           onMoveStage={handleMoveStage}
           onSelectItem={(item) => setSelectedItem(item)}
           onOpenQRModal={(item) => setQrModalItem(item)}
+          onDeleteEquipment={handleDeleteEquipment}
         />
       )}
 
@@ -827,6 +877,7 @@ export default function App() {
           onAssignTechnician={handleAssignTechnician}
           onSetPromisedDate={handleSetPromisedDate}
           onAddNote={handleAddNote}
+          onDeleteEquipment={handleDeleteEquipment}
           onOpenQRModal={(item) => {
             setSelectedItem(null);
             setQrModalItem(item);

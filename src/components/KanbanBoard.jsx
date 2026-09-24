@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar } from 'lucide-react';
+import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar, Trash2 } from 'lucide-react';
 
 export default function KanbanBoard({
   equipmentList,
@@ -8,6 +8,7 @@ export default function KanbanBoard({
   onMoveStage,
   onSelectItem,
   onOpenQRModal,
+  onDeleteEquipment,
 }) {
   const [activeMobileStage, setActiveMobileStage] = useState('received');
 
@@ -201,6 +202,18 @@ export default function KanbanBoard({
                           >
                             <QrCode className="w-3.5 h-3.5" />
                           </button>
+                          {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteEquipment(item.id);
+                              }}
+                              className="p-1.5 rounded-xl bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-700 transition-colors"
+                              title="Eliminar Ficha (Exclusivo Admin / Super Admin)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Quick Stage Advance */}

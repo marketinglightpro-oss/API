@@ -11,6 +11,7 @@ export default function EquipmentDetailModal({
   onAssignTechnician,
   onSetPromisedDate,
   onAddNote,
+  onDeleteEquipment,
   onOpenQRModal,
   onClose,
 }) {
@@ -178,6 +179,18 @@ export default function EquipmentDetailModal({
             >
               <QrCode className="w-4 h-4" />
             </button>
+
+            {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && (
+              <button
+                onClick={() => onDeleteEquipment(item.id)}
+                className="p-2.5 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white text-red-600 transition-all shadow-sm border border-red-200 flex items-center gap-1.5 text-xs font-bold"
+                title="Eliminar Ficha de Equipo (Exclusivo Admin / Super Admin)"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Eliminar Ficha</span>
+              </button>
+            )}
+
             <button
               onClick={onClose}
               className="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white flex items-center justify-center text-gray-600 transition-all shadow-sm border border-gray-200"
