@@ -7,6 +7,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -104,7 +105,16 @@ export default function LoginScreen({ onLoginSuccess }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">Contraseña</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-gray-700 font-semibold">Contraseña</label>
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="text-[11px] text-gray-500 hover:text-black font-semibold transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
             <div className="relative">
               <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -166,6 +176,36 @@ export default function LoginScreen({ onLoginSuccess }) {
         </div>
 
       </div>
+
+      {/* Forgot Password Notice Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <div className="liquid-card bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-gray-200 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto border border-amber-300 shadow-md">
+              <Shield className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900 tracking-tight">
+                Restablecimiento de Contraseña
+              </h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mt-0.5">
+                Exclusivo Super Admin
+              </p>
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed font-medium bg-gray-50 p-4 rounded-2xl border border-gray-200 text-left">
+              Por políticas de seguridad de <strong>LIGHTPRO</strong>, el restablecimiento y asignación de contraseñas es gestionado únicamente por el <strong>Super Admin</strong> del sistema.<br/><br/>
+              Por favor contacta a tu Administrador Principal para que te asigne una nueva clave de acceso de forma segura.
+            </p>
+            <button
+              onClick={() => setShowForgotModal(false)}
+              className="w-full liquid-btn-primary py-3 rounded-2xl text-xs font-bold shadow-md"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
