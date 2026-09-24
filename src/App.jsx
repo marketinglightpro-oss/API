@@ -13,21 +13,29 @@ import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
-// Helper to filter out legacy mock items (keeps EQ-7434, EQ9864, EQ-9864, and new user equipment)
-const isMockEquipmentId = (id) => {
-  if (!id) return false;
+// Helper to filter out legacy mock items (keeps EQ-7434, EQ9864, EQ-9864, and newly registered user equipment)
+const ALLOWED_EQUIPMENT_IDS = new Set(['EQ-7434', 'EQ9864', 'EQ-9864']);
+const MOCK_CUTOFF_TIMESTAMP = new Date('2026-09-24T14:00:00Z').getTime();
+
+const isMockEquipmentId = (id, createdAt) => {
+  if (!id) return true;
   const clean = id.toString().trim().toUpperCase();
-  if (clean === 'EQ-7434' || clean === 'EQ9864' || clean === 'EQ-9864') {
+
+  // Explicitly whitelist requested equipment IDs
+  if (ALLOWED_EQUIPMENT_IDS.has(clean)) {
     return false;
   }
-  return (
-    clean.startsWith('LP-') ||
-    clean.startsWith('LP') ||
-    clean.startsWith('MOCK') ||
-    clean.startsWith('TEST') ||
-    clean.startsWith('DEMO') ||
-    clean.startsWith('EQUIP-')
-  );
+
+  // Preserve any newly registered user equipment (created after cutoff timestamp)
+  if (createdAt) {
+    const createdTime = new Date(createdAt).getTime();
+    if (!isNaN(createdTime) && createdTime >= MOCK_CUTOFF_TIMESTAMP) {
+      return false;
+    }
+  }
+
+  // Treat all other legacy records as mock data to be purged
+  return true;
 };
 
 export default function App() {
@@ -41,7 +49,7 @@ export default function App() {
     if (!saved) return INITIAL_EQUIPMENT;
     try {
       const parsed = JSON.parse(saved);
-      return parsed.filter(item => !isMockEquipmentId(item?.id));
+      return parsed.filter(item => !isMockEquipmentId(item?.id, item?.createdAt || item?.created_at));
     } catch (e) {
       return INITIAL_EQUIPMENT;
     }
@@ -140,7 +148,7 @@ export default function App() {
         const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
         if (!eqErr && eqData) {
           // Identify mock items in Supabase DB to purge
-          const mockItemsToPurge = eqData.filter(item => isMockEquipmentId(item.id));
+          const mockItemsToPurge = eqData.filter(item => isMockEquipmentId(item.id, item.created_at));
           if (mockItemsToPurge.length > 0) {
             console.log(`[Supabase Purge] Purgando ${mockItemsToPurge.length} fichas mock de la nube...`);
             for (const mockItem of mockItemsToPurge) {
@@ -148,7 +156,7 @@ export default function App() {
             }
           }
 
-          const filteredData = eqData.filter(item => !isMockEquipmentId(item.id));
+          const filteredData = eqData.filter(item => !isMockEquipmentId(item.id, item.created_at));
 
           const mapped = filteredData.map(item => ({
             id: item.id,
@@ -213,7 +221,7 @@ export default function App() {
       }
 
       const remoteIds = new Set((remoteData || []).map((i) => i.id));
-      const unSyncedItems = equipmentList.filter((localItem) => !isMockEquipmentId(localItem.id) && !remoteIds.has(localItem.id));
+      const unSyncedItems = equipmentList.filter((localItem) => !isMockEquipmentId(localItem.id, localItem.createdAt || localItem.created_at) && !remoteIds.has(localItem.id));
 
       if (unSyncedItems.length > 0) {
         console.log(`[Auto-Sync 10s] Subiendo ${unSyncedItems.length} equipos faltantes a la nube Supabase...`);
