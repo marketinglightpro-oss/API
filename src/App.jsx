@@ -8,19 +8,20 @@ import QRScannerModal from './components/QRScannerModal';
 import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
-import { Shield, Wrench, User } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { Shield, Wrench, User, Database } from 'lucide-react';
 
 export default function App() {
   const [currentRole, setCurrentRole] = useState('admin'); // 'admin' | 'technician' | 'client'
   const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'register' | 'scanner' | 'logs'
   
-  // Equipment Data State with localStorage persistence
+  // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
     const saved = localStorage.getItem('lightpro_equipment');
     return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT;
   });
 
-  // System Activity Logs State with localStorage persistence
+  // System Activity Logs State
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('lightpro_logs');
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
@@ -36,6 +37,53 @@ export default function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
+  // Sync with Supabase on Mount if credentials exist
+  useEffect(() => {
+    const fetchSupabaseData = async () => {
+      if (!isSupabaseConfigured || !supabase) return;
+      try {
+        const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
+        if (!eqErr && eqData && eqData.length > 0) {
+          const mapped = eqData.map(item => ({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            serialNumber: item.serial_number,
+            ownerName: item.owner_name,
+            ownerPhone: item.owner_phone,
+            ownerEmail: item.owner_email,
+            issue: item.issue,
+            priority: item.priority,
+            status: item.status,
+            technicianAssigned: item.technician_assigned,
+            createdAt: item.created_at,
+            photoUrl: item.photo_url,
+            notes: item.notes || [],
+            history: item.history || [],
+          }));
+          setEquipmentList(mapped);
+        }
+
+        const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
+        if (!logErr && logData && logData.length > 0) {
+          const mappedLogs = logData.map(l => ({
+            id: l.id,
+            timestamp: l.timestamp,
+            user: l.user_name,
+            role: l.role,
+            action: l.action,
+            detail: l.detail,
+          }));
+          setLogs(mappedLogs);
+        }
+      } catch (err) {
+        console.warn('Supabase fetch error, using local state:', err);
+      }
+    };
+
+    fetchSupabaseData();
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('lightpro_equipment', JSON.stringify(equipmentList));
@@ -46,21 +94,23 @@ export default function App() {
   }, [logs]);
 
   // Handle Stage Movement
-  const handleMoveStage = (itemId, targetStageId) => {
+  const handleMoveStage = async (itemId, targetStageId) => {
     const stageObj = KANBAN_STAGES.find((s) => s.id === targetStageId);
     const updatedBy = currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : 'Cliente';
+
+    const targetItem = equipmentList.find((i) => i.id === itemId);
+    const newHistory = [
+      ...(targetItem?.history || []),
+      {
+        stage: targetStageId,
+        timestamp: new Date().toISOString(),
+        updatedBy: updatedBy,
+      },
+    ];
 
     setEquipmentList((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
-          const newHistory = [
-            ...(item.history || []),
-            {
-              stage: targetStageId,
-              timestamp: new Date().toISOString(),
-              updatedBy: updatedBy,
-            },
-          ];
           return {
             ...item,
             status: targetStageId,
@@ -71,20 +121,14 @@ export default function App() {
       })
     );
 
-    // Update active selected item if opened in modal
     if (selectedItem && selectedItem.id === itemId) {
       setSelectedItem((prev) => ({
         ...prev,
         status: targetStageId,
-        history: [
-          ...(prev.history || []),
-          { stage: targetStageId, timestamp: new Date().toISOString(), updatedBy: updatedBy },
-        ],
+        history: newHistory,
       }));
     }
 
-    // Add Audit Log Entry
-    const targetItem = equipmentList.find((i) => i.id === itemId);
     const newLog = {
       id: `LOG-${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -94,10 +138,27 @@ export default function App() {
       detail: `Equipo ${targetItem?.name} (${itemId}) avanzado a la etapa "${stageObj?.title}"`,
     };
     setLogs((prev) => [newLog, ...prev]);
+
+    // Persist to Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('equipment').update({ status: targetStageId, history: newHistory }).eq('id', itemId);
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error updating Supabase:', err);
+      }
+    }
   };
 
   // Handle New Equipment Registration
-  const handleAddEquipment = (newRecord) => {
+  const handleAddEquipment = async (newRecord) => {
     setEquipmentList((prev) => [newRecord, ...prev]);
 
     const newLog = {
@@ -111,17 +172,54 @@ export default function App() {
     setLogs((prev) => [newLog, ...prev]);
 
     setShowRegisterModal(false);
-    setQrModalItem(newRecord); // Instantly open QR Modal for newly registered item
+    setQrModalItem(newRecord);
+
+    // Persist to Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('equipment').insert([{
+          id: newRecord.id,
+          name: newRecord.name,
+          category: newRecord.category,
+          serial_number: newRecord.serialNumber,
+          owner_name: newRecord.ownerName,
+          owner_phone: newRecord.ownerPhone,
+          owner_email: newRecord.ownerEmail,
+          issue: newRecord.issue,
+          priority: newRecord.priority,
+          status: newRecord.status,
+          technician_assigned: newRecord.technicianAssigned,
+          created_at: newRecord.createdAt,
+          photo_url: newRecord.photoUrl,
+          notes: newRecord.notes,
+          history: newRecord.history,
+        }]);
+
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error saving to Supabase:', err);
+      }
+    }
   };
 
   // Handle Technical Note Addition
-  const handleAddNote = (itemId, note) => {
+  const handleAddNote = async (itemId, note) => {
+    let updatedNotes = [];
+
     setEquipmentList((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
+          updatedNotes = [note, ...(item.notes || [])];
           return {
             ...item,
-            notes: [note, ...(item.notes || [])],
+            notes: updatedNotes,
           };
         }
         return item;
@@ -144,6 +242,23 @@ export default function App() {
       detail: `Nota añadida a ${itemId}: "${note.text}"`,
     };
     setLogs((prev) => [newLog, ...prev]);
+
+    // Persist to Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('equipment').update({ notes: updatedNotes }).eq('id', itemId);
+        await supabase.from('activity_logs').insert([{
+          id: newLog.id,
+          timestamp: newLog.timestamp,
+          user_name: newLog.user,
+          role: newLog.role,
+          action: newLog.action,
+          detail: newLog.detail,
+        }]);
+      } catch (err) {
+        console.error('Error updating note in Supabase:', err);
+      }
+    }
   };
 
   // Filter Logic
@@ -161,7 +276,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen py-6 transition-colors">
+    <div className="min-h-screen py-4 sm:py-6 transition-colors">
       
       {/* Top Header & Role Switcher */}
       <Header
@@ -179,21 +294,24 @@ export default function App() {
         }}
       />
 
-      {/* Role Notice Banner */}
-      <div className="max-w-7xl mx-auto px-4 mb-4">
-        <div className="bg-black text-white px-4 py-2 rounded-2xl flex items-center justify-between text-xs shadow-md">
+      {/* Role & Database Status Notice Banner */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 mb-4">
+        <div className="bg-black text-white px-3.5 py-2 rounded-2xl flex flex-wrap items-center justify-between text-xs shadow-md gap-2">
           <div className="flex items-center gap-2">
-            {currentRole === 'admin' && <Shield className="w-4 h-4 text-emerald-400" />}
-            {currentRole === 'technician' && <Wrench className="w-4 h-4 text-amber-400" />}
-            {currentRole === 'client' && <User className="w-4 h-4 text-blue-400" />}
+            {currentRole === 'admin' && <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+            {currentRole === 'technician' && <Wrench className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+            {currentRole === 'client' && <User className="w-4 h-4 text-blue-400 flex-shrink-0" />}
             <span className="font-semibold">
               Modo Activo: <span className="uppercase text-white underline font-bold">{currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente'}</span>
             </span>
-            <span className="hidden md:inline text-gray-400">
-              ({currentRole === 'admin' ? 'Acceso total de edición y configuración' : currentRole === 'technician' ? 'Puede actualizar estado Kanban, añadir notas y escanear QR' : 'Registrar equipos y consultar estado de reparación'})
+          </div>
+
+          <div className="flex items-center gap-1.5 text-[11px]">
+            <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <span className="text-gray-300">
+              BD: {isSupabaseConfigured ? 'Supabase Conectado (Nube)' : 'Almacenamiento Local (Configura Supabase)'}
             </span>
           </div>
-          <span className="text-[10px] text-gray-400 font-mono">LIGHTPRO SPA v1.0</span>
         </div>
       </div>
 
@@ -225,7 +343,7 @@ export default function App() {
 
       {/* Modals */}
 
-      {/* Equipment Registration Modal */}
+      {/* Equipment Registration Modal with Camera Photo Capture */}
       {showRegisterModal && (
         <EquipmentForm
           currentRole={currentRole}
@@ -234,7 +352,7 @@ export default function App() {
         />
       )}
 
-      {/* QR Code Scanner Viewfinder Modal */}
+      {/* Real Phone Camera QR Scanner Modal */}
       {showScannerModal && (
         <QRScannerModal
           equipmentList={equipmentList}

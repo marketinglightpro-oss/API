@@ -1,31 +1,119 @@
-import React, { useState } from 'react';
-import { Camera, QrCode, Search, Zap, RefreshCw, X, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { Camera, QrCode, Search, Zap, RefreshCw, X, CheckCircle2, ArrowRight, Upload, Image as ImageIcon } from 'lucide-react';
 
 export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }) {
   const [manualInput, setManualInput] = useState('');
-  const [flashOn, setFlashOn] = useState(false);
-  const [cameraFacing, setCameraFacing] = useState('environment');
   const [scannedResult, setScannedResult] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState('');
 
-  const handleSimulateScan = (item) => {
-    setScannedResult(item);
+  const scannerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Initialize Real Camera Stream
+  useEffect(() => {
+    let html5QrcodeScanner = null;
+
+    const startScanner = async () => {
+      try {
+        setCameraError('');
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setCameras(devices);
+          // Prefer back camera ("environment") if available
+          const backCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('trasera') || d.label.toLowerCase().includes('rear')) || devices[devices.length - 1];
+          const camId = backCamera ? backCamera.id : devices[0].id;
+          setSelectedCameraId(camId);
+
+          html5QrcodeScanner = new Html5Qrcode("reader");
+          scannerRef.current = html5QrcodeScanner;
+
+          await html5QrcodeScanner.start(
+            camId,
+            {
+              fps: 10,
+              qrbox: { width: 220, height: 220 },
+              aspectRatio: 1.0,
+            },
+            (decodedText) => {
+              handleDecodedText(decodedText);
+            },
+            () => {
+              // Ignore frame parse errors silently while scanning
+            }
+          );
+          setIsScanning(true);
+        } else {
+          setCameraError('No camera found on this device.');
+        }
+      } catch (err) {
+        console.warn('Camera access warning/error:', err);
+        setCameraError('Could not start live camera stream. You can scan from a gallery photo or select a test item below.');
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(e => console.error(e));
+      }
+    };
+  }, []);
+
+  // Process decoded QR code string (either JSON payload or plain ID)
+  const handleDecodedText = (decodedText) => {
+    let targetId = decodedText.trim();
+
+    // Try parsing if payload is JSON object
+    try {
+      const parsed = JSON.parse(decodedText);
+      if (parsed && parsed.id) {
+        targetId = parsed.id;
+      }
+    } catch (e) {
+      // Not JSON, use raw text
+    }
+
+    const found = equipmentList.find(
+      (e) =>
+        e.id.toLowerCase() === targetId.toLowerCase() ||
+        e.serialNumber.toLowerCase() === targetId.toLowerCase() ||
+        e.name.toLowerCase().includes(targetId.toLowerCase())
+    );
+
+    if (found) {
+      setScannedResult(found);
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(() => {});
+        setIsScanning(false);
+      }
+    } else {
+      alert(`Scanned QR ("${targetId}") does not match any registered equipment.`);
+    }
+  };
+
+  // Scan QR from Gallery Photo File
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const html5Qr = scannerRef.current || new Html5Qrcode("reader-file-temp");
+      const decodedText = await html5Qr.scanFile(file, true);
+      handleDecodedText(decodedText);
+    } catch (err) {
+      alert('Could not read QR code from the selected image. Please make sure the QR code is clear.');
+    }
   };
 
   const handleManualSearch = (e) => {
     e.preventDefault();
     if (!manualInput.trim()) return;
-    const query = manualInput.trim().toLowerCase();
-    const found = equipmentList.find(
-      (e) =>
-        e.id.toLowerCase() === query ||
-        e.serialNumber.toLowerCase() === query ||
-        e.name.toLowerCase().includes(query)
-    );
-    if (found) {
-      setScannedResult(found);
-    } else {
-      alert(`No se encontró ningún equipo que coincida con "${manualInput}"`);
-    }
+    handleDecodedText(manualInput.trim());
   };
 
   const confirmScanAndOpenDetails = () => {
@@ -45,8 +133,8 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
               <Camera className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm tracking-tight text-white">Escáner QR Cámara Móvil</h3>
-              <p className="text-[10px] text-gray-400">Escanea la etiqueta física o selecciona equipo</p>
+              <h3 className="font-bold text-sm tracking-tight text-white">Escáner de Cámara Real</h3>
+              <p className="text-[10px] text-gray-400">Escaneo de códigos QR en tiempo real</p>
             </div>
           </div>
           <button
@@ -57,51 +145,43 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
           </button>
         </div>
 
-        {/* Viewfinder Camera Simulation */}
-        <div className="relative w-full h-56 sm:h-64 rounded-2xl bg-black overflow-hidden border border-gray-800 flex flex-col items-center justify-center">
+        {/* Live Camera Viewfinder Box */}
+        <div className="relative w-full min-h-[240px] sm:min-h-[260px] rounded-2xl bg-black overflow-hidden border border-gray-800 flex flex-col items-center justify-center">
           
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-900 to-black opacity-90" />
-          
-          {/* Corner Framing Markers */}
-          <div className="relative w-40 sm:w-48 h-40 sm:h-48 border-2 border-white/20 rounded-2xl flex items-center justify-center shadow-2xl">
-            <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-white rounded-tl-lg" />
-            <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-white rounded-tr-lg" />
-            <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-white rounded-bl-lg" />
-            <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-white rounded-br-lg" />
-            
-            {/* Red Laser Scanline */}
-            <div className="w-full h-0.5 bg-red-500 shadow-[0_0_15px_#ef4444] animate-scanline" />
-            
-            {/* Viewfinder Icon */}
-            <QrCode className="w-10 sm:w-12 h-10 sm:h-12 text-white/30" />
+          {/* HTML5 QR Camera Container */}
+          <div id="reader" className="w-full h-full text-center" />
+          <div id="reader-file-temp" className="hidden" />
+
+          {/* Fallback framing if camera permissions pending / error */}
+          {cameraError && (
+            <div className="p-4 text-center text-xs text-amber-300 bg-amber-950/40 rounded-xl m-3 border border-amber-800/40">
+              <p className="font-semibold mb-1">Cámara no disponible</p>
+              <p className="text-[10px] text-gray-300">{cameraError}</p>
+            </div>
+          )}
+
+          {/* Action buttons bar for Camera Gallery & Camera Switch */}
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1.5 rounded-full bg-white text-black text-xs font-bold flex items-center gap-1.5 shadow-md hover:bg-gray-200 transition-all"
+              title="Cargar foto desde Galería"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Subir Foto QR</span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              className="hidden"
+            />
           </div>
 
-          {/* Camera Controls Bar */}
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            <button
-              onClick={() => setFlashOn(!flashOn)}
-              className={`p-2 rounded-full text-xs font-semibold backdrop-blur-md transition-all ${
-                flashOn ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/30' : 'bg-gray-800/80 text-gray-300'
-              }`}
-              title="Encender Linterna"
-            >
-              <Zap className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setCameraFacing(cameraFacing === 'environment' ? 'user' : 'environment')}
-              className="p-2 rounded-full bg-gray-800/80 text-gray-300 hover:text-white backdrop-blur-md transition-all"
-              title="Cambiar Cámara"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-
-          <span className="absolute bottom-2 text-[10px] text-gray-400 bg-gray-900/80 px-3 py-1 rounded-full border border-gray-800">
-            Alinea el código QR dentro del recuadro
-          </span>
         </div>
 
-        {/* Scan Result Drawer / Notification */}
+        {/* Scan Result Recognized Card */}
         {scannedResult ? (
           <div className="mt-4 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-left animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
@@ -129,16 +209,16 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
         ) : (
           <div className="mt-3 space-y-3">
             
-            {/* Quick Test Simulator Buttons */}
+            {/* Quick Select Preset Equipment list */}
             <div>
               <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                Simular Escaneo (Selecciona Equipo):
+                O Selecciona Equipo Registrado para Ver Ficha:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1">
                 {equipmentList.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => handleSimulateScan(item)}
+                    onClick={() => setScannedResult(item)}
                     className="p-2 sm:p-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-left transition-all group"
                   >
                     <div className="flex items-center justify-between text-[11px]">
@@ -158,7 +238,7 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
             {/* Manual Serial Search Fallback */}
             <form onSubmit={handleManualSearch} className="pt-2 border-t border-gray-800">
               <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                O Buscar por ID / Serie:
+                O Buscar por ID / Serie Manualmente:
               </label>
               <div className="flex gap-2">
                 <input

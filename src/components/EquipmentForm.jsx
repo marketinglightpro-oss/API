@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CATEGORIES } from '../mockData';
-import { PlusCircle, QrCode, X, ShieldAlert } from 'lucide-react';
+import { PlusCircle, QrCode, X, ShieldAlert, Camera, Upload, Trash2 } from 'lucide-react';
 
 export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) {
   const [formData, setFormData] = useState({
@@ -13,12 +13,25 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     issue: '',
     priority: 'Media',
     technicianAssigned: currentRole === 'technician' ? 'Técnico Usuario' : 'Carlos Mendoza',
+    photoUrl: '',
   });
 
   const [error, setError] = useState('');
+  const photoInputRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handlePhotoCapture = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, photoUrl: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -137,6 +150,46 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
                 <option value="Urgente">Urgente (Crítico para Evento)</option>
               </select>
             </div>
+          </div>
+
+          {/* Photo Capture Section (Real Smartphone Camera / Upload) */}
+          <div className="p-3.5 rounded-2xl bg-gray-50/80 border border-gray-200/60">
+            <label className="block text-gray-700 font-semibold mb-1.5 flex items-center justify-between">
+              <span>Fotografía del Equipo / Daño Reportado</span>
+              <span className="text-[10px] text-gray-400 font-normal">Cámara o Galería Móvil</span>
+            </label>
+
+            {formData.photoUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 h-32 bg-black flex items-center justify-center">
+                <img src={formData.photoUrl} alt="Foto del equipo" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, photoUrl: '' })}
+                  className="absolute top-2 right-2 p-1.5 bg-black/70 text-white rounded-full hover:bg-red-600 transition-colors"
+                  title="Eliminar foto"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="w-full py-4 border-2 border-dashed border-gray-300 hover:border-black rounded-xl bg-white flex flex-col items-center justify-center text-gray-500 hover:text-black transition-all"
+              >
+                <Camera className="w-6 h-6 mb-1 text-gray-400" />
+                <span className="font-semibold text-xs">Tomar Foto con Celular o Subir de Galería</span>
+              </button>
+            )}
+
+            <input
+              type="file"
+              ref={photoInputRef}
+              onChange={handlePhotoCapture}
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+            />
           </div>
 
           {/* Owner Details */}
