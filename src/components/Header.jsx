@@ -1,8 +1,9 @@
 import React from 'react';
-import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogIn, LogOut } from 'lucide-react';
+import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogOut, Users } from 'lucide-react';
 
-export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onOpenAuthModal, onSignOut }) {
+export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onSignOut }) {
   const roles = [
+    { id: 'super_admin', label: 'Super Admin', icon: Shield },
     { id: 'admin', label: 'Admin', icon: Shield },
     { id: 'technician', label: 'Técnico', icon: Wrench },
     { id: 'client', label: 'Cliente', icon: User },
@@ -14,6 +15,11 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
     { id: 'scanner', label: 'Escanear QR', icon: QrCode },
     { id: 'logs', label: 'Historial', icon: Activity },
   ];
+
+  // If Super Admin, add User Management tab
+  if (currentRole === 'super_admin') {
+    tabs.push({ id: 'users', label: 'Usuarios', icon: Users });
+  }
 
   return (
     <>
@@ -54,10 +60,10 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
             })}
           </nav>
 
-          {/* Right Section: Role Switcher, User Profile & Login */}
+          {/* Right Section: Role Indicator, User Profile & Logout */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             
-            {/* Role Switcher Pill */}
+            {/* Role Indicator Pill */}
             <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
               {roles.map((r) => {
                 const Icon = r.icon;
@@ -79,8 +85,8 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
               })}
             </div>
 
-            {/* Auth Login / Logout Profile Button */}
-            {currentUser ? (
+            {/* Auth User Profile Badge & Logout Button */}
+            {currentUser && (
               <div className="flex items-center gap-1.5 bg-gray-100 p-1 pl-3 rounded-full text-xs font-semibold border border-gray-200">
                 <span className="text-gray-800 font-bold truncate max-w-[100px] sm:max-w-[130px]">
                   {currentUser.user_metadata?.full_name || currentUser.email}
@@ -93,14 +99,6 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={onOpenAuthModal}
-                className="liquid-btn-primary px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Ingresar</span>
-              </button>
             )}
 
             {/* Notification Bell */}

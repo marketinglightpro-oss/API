@@ -7,15 +7,16 @@ import QRCodeModal from './components/QRCodeModal';
 import QRScannerModal from './components/QRScannerModal';
 import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
-import AuthModal from './components/AuthModal';
+import UserManagementView from './components/UserManagementView';
+import LoginScreen from './components/LoginScreen';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { Shield, Wrench, User, Database } from 'lucide-react';
+import { Shield, Wrench, User, Database, Lock } from 'lucide-react';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState('admin'); // 'admin' | 'technician' | 'client'
-  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'register' | 'scanner' | 'logs'
   const [currentUser, setCurrentUser] = useState(null);
+  const [currentRole, setCurrentRole] = useState('super_admin'); // 'super_admin' | 'admin' | 'technician' | 'client'
+  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'register' | 'scanner' | 'logs' | 'users'
 
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
@@ -38,26 +39,24 @@ export default function App() {
   const [qrModalItem, setQrModalItem] = useState(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Supabase Auth State Listener
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
-    // Fetch active user session
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setCurrentUser(user);
-        const metaRole = user.user_metadata?.role;
-        if (metaRole) setCurrentRole(metaRole);
+        const metaRole = user.user_metadata?.role || 'super_admin';
+        setCurrentRole(metaRole);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setCurrentUser(session.user);
-        const metaRole = session.user.user_metadata?.role;
-        if (metaRole) setCurrentRole(metaRole);
+        const metaRole = session.user.user_metadata?.role || 'super_admin';
+        setCurrentRole(metaRole);
       } else {
         setCurrentUser(null);
       }
@@ -130,8 +129,8 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Auth Success Callback
-  const handleAuthSuccess = (user, userRole) => {
+  // Login Success Callback
+  const handleLoginSuccess = (user, userRole) => {
     setCurrentUser(user);
     if (userRole) setCurrentRole(userRole);
   };
@@ -141,7 +140,7 @@ export default function App() {
     const stageObj = KANBAN_STAGES.find((s) => s.id === targetStageId);
     const updatedBy = currentUser
       ? (currentUser.user_metadata?.full_name || currentUser.email)
-      : currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : 'Cliente';
+      : 'Usuario Autorizado';
 
     const targetItem = equipmentList.find((i) => i.id === itemId);
     const newHistory = [
@@ -178,7 +177,7 @@ export default function App() {
       id: `LOG-${Date.now()}`,
       timestamp: new Date().toISOString(),
       user: updatedBy,
-      role: currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
+      role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Cambio de Estado',
       detail: `Equipo ${targetItem?.name} (${itemId}) avanzado a la etapa "${stageObj?.title}"`,
     };
@@ -206,7 +205,7 @@ export default function App() {
   const handleAddEquipment = async (newRecord) => {
     const authorName = currentUser
       ? (currentUser.user_metadata?.full_name || currentUser.email)
-      : currentRole === 'admin' ? 'Usuario Administrador' : currentRole === 'technician' ? 'Técnico Encargado' : newRecord.ownerName;
+      : newRecord.ownerName;
 
     setEquipmentList((prev) => [newRecord, ...prev]);
 
@@ -214,7 +213,7 @@ export default function App() {
       id: `LOG-${Date.now()}`,
       timestamp: new Date().toISOString(),
       user: authorName,
-      role: currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
+      role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Equipo Registrado',
       detail: `Nuevo equipo registrado: ${newRecord.name} (${newRecord.id}) - Serie: ${newRecord.serialNumber}`,
     };
@@ -310,6 +309,11 @@ export default function App() {
     }
   };
 
+  // Mandatory Login Gate: If not authenticated, render LoginScreen
+  if (!currentUser) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   // Filter Logic
   const filteredEquipment = equipmentList.filter((item) => {
     const matchesCategory = !activeCategory || item.category === activeCategory;
@@ -325,9 +329,9 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen py-4 sm:py-6 transition-colors">
+    <div className="min-h-screen py-4 sm:py-6 transition-colors font-poppins selection:bg-black selection:text-white">
       
-      {/* Top Header & Role Switcher */}
+      {/* Top Header & Role Indicator */}
       <Header
         currentRole={currentRole}
         setCurrentRole={setCurrentRole}
@@ -342,7 +346,6 @@ export default function App() {
           }
         }}
         currentUser={currentUser}
-        onOpenAuthModal={() => setShowAuthModal(true)}
         onSignOut={handleSignOut}
       />
 
@@ -350,11 +353,12 @@ export default function App() {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 mb-4">
         <div className="bg-black text-white px-3.5 py-2 rounded-2xl flex flex-wrap items-center justify-between text-xs shadow-md gap-2">
           <div className="flex items-center gap-2">
-            {currentRole === 'admin' && <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
-            {currentRole === 'technician' && <Wrench className="w-4 h-4 text-amber-400 flex-shrink-0" />}
-            {currentRole === 'client' && <User className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+            {currentRole === 'super_admin' && <Shield className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+            {currentRole === 'admin' && <Shield className="w-4 h-4 text-purple-400 flex-shrink-0" />}
+            {currentRole === 'technician' && <Wrench className="w-4 h-4 text-blue-400 flex-shrink-0" />}
+            {currentRole === 'client' && <User className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
             <span className="font-semibold">
-              Modo Activo: <span className="uppercase text-white underline font-bold">{currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente'}</span>
+              Modo Activo: <span className="uppercase text-white underline font-bold">{currentRole === 'super_admin' ? 'SUPER ADMIN' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente'}</span>
             </span>
           </div>
 
@@ -393,14 +397,11 @@ export default function App() {
         <ActivityLogView logs={logs} />
       )}
 
-      {/* Modals */}
+      {activeTab === 'users' && (
+        <UserManagementView currentUser={currentUser} />
+      )}
 
-      {/* Supabase User Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
+      {/* Modals */}
 
       {/* Equipment Registration Modal with Camera Photo Capture */}
       {showRegisterModal && (

@@ -1,4 +1,4 @@
--- LIGHTPRO COMPLETE SQL SCHEMA FOR SUPABASE (EQUIPMENT + AUTH PROFILES)
+-- LIGHTPRO COMPLETE SQL SCHEMA FOR SUPABASE (SUPER ADMIN + USER MANAGEMENT)
 -- Run this script in your Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql)
 
 -- 1. Create Profiles Table (Linked to Supabase Auth)
@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'technician', -- 'admin' | 'technician' | 'client'
+  role TEXT NOT NULL DEFAULT 'technician', -- 'super_admin' | 'admin' | 'technician' | 'client'
   phone TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -54,6 +54,9 @@ CREATE POLICY "Public insert profiles" ON public.profiles FOR INSERT WITH CHECK 
 
 DROP POLICY IF EXISTS "Public update profiles" ON public.profiles;
 CREATE POLICY "Public update profiles" ON public.profiles FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public delete profiles" ON public.profiles;
+CREATE POLICY "Public delete profiles" ON public.profiles FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "Public read equipment" ON public.equipment;
 CREATE POLICY "Public read equipment" ON public.equipment FOR SELECT USING (true);
