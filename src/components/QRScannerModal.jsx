@@ -67,23 +67,42 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
   // Process decoded QR code string (either JSON payload or plain ID)
   const handleDecodedText = (decodedText) => {
     let targetId = decodedText.trim();
+    let serialSearch = '';
+    let nameSearch = '';
 
     // Try parsing if payload is JSON object
     try {
       const parsed = JSON.parse(decodedText);
-      if (parsed && parsed.id) {
-        targetId = parsed.id;
+      if (parsed) {
+        if (parsed.id) targetId = parsed.id.trim();
+        if (parsed.serialNumber) serialSearch = parsed.serialNumber.trim();
+        if (parsed.name) nameSearch = parsed.name.trim();
       }
     } catch (e) {
       // Not JSON, use raw text
     }
 
-    const found = equipmentList.find(
-      (e) =>
-        e.id.toLowerCase() === targetId.toLowerCase() ||
-        e.serialNumber.toLowerCase() === targetId.toLowerCase() ||
-        e.name.toLowerCase().includes(targetId.toLowerCase())
-    );
+    const cleanTarget = targetId.toLowerCase();
+    const cleanSerial = serialSearch.toLowerCase();
+    const cleanName = nameSearch.toLowerCase();
+
+    const found = equipmentList.find((e) => {
+      const eId = (e.id || '').toLowerCase();
+      const eSerial = (e.serialNumber || '').toLowerCase();
+      const eName = (e.name || '').toLowerCase();
+      const eOwner = (e.ownerName || '').toLowerCase();
+
+      return (
+        eId === cleanTarget ||
+        (cleanSerial && eSerial === cleanSerial) ||
+        eSerial === cleanTarget ||
+        (cleanName && eName.includes(cleanName)) ||
+        eName.includes(cleanTarget) ||
+        eOwner.includes(cleanTarget) ||
+        cleanTarget.includes(eId) ||
+        cleanTarget.includes(eSerial)
+      );
+    });
 
     if (found) {
       setScannedResult(found);
@@ -92,7 +111,7 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
         setIsScanning(false);
       }
     } else {
-      alert(`Scanned QR ("${targetId}") does not match any registered equipment.`);
+      alert(`El código QR o búsqueda ("${targetId}") no coincide con ningún equipo registrado en el sistema.`);
     }
   };
 
@@ -106,7 +125,7 @@ export default function QRScannerModal({ equipmentList, onScanSuccess, onClose }
       const decodedText = await html5Qr.scanFile(file, true);
       handleDecodedText(decodedText);
     } catch (err) {
-      alert('Could not read QR code from the selected image. Please make sure the QR code is clear.');
+      alert('No se pudo leer el código QR en la imagen seleccionada. Por favor asegúrate de que la foto sea clara e intenta de nuevo.');
     }
   };
 

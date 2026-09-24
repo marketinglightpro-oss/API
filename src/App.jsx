@@ -102,7 +102,7 @@ export default function App() {
       if (!isSupabaseConfigured || !supabase) return;
       try {
         const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
-        if (!eqErr && eqData && eqData.length > 0) {
+        if (!eqErr && eqData) {
           const mapped = eqData.map(item => ({
             id: item.id,
             name: item.name,
@@ -120,7 +120,17 @@ export default function App() {
             notes: item.notes || [],
             history: item.history || [],
           }));
-          setEquipmentList(mapped);
+          
+          // Merge with local items that haven't synced yet
+          setEquipmentList((prev) => {
+            const combined = [...mapped];
+            prev.forEach((localItem) => {
+              if (!combined.some((remoteItem) => remoteItem.id === localItem.id)) {
+                combined.push(localItem);
+              }
+            });
+            return combined;
+          });
         }
 
         const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
@@ -256,7 +266,7 @@ export default function App() {
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('equipment').insert([{
+        const { error: eqErr } = await supabase.from('equipment').insert([{
           id: newRecord.id,
           name: newRecord.name,
           category: newRecord.category,
@@ -274,7 +284,30 @@ export default function App() {
           history: newRecord.history,
         }]);
 
-        await supabase.from('activity_logs').insert([{
+        if (eqErr) {
+          console.error('Error guardando equipo en Supabase:', eqErr);
+          // If insert error is related to image payload, attempt insert without photo_url
+          console.warn('Reintentando guardar equipo en Supabase sin imagen...');
+          await supabase.from('equipment').insert([{
+            id: newRecord.id,
+            name: newRecord.name,
+            category: newRecord.category,
+            serial_number: newRecord.serialNumber,
+            owner_name: newRecord.ownerName,
+            owner_phone: newRecord.ownerPhone,
+            owner_email: newRecord.ownerEmail,
+            issue: newRecord.issue,
+            priority: newRecord.priority,
+            status: newRecord.status,
+            technician_assigned: newRecord.technicianAssigned,
+            created_at: newRecord.createdAt,
+            photo_url: null,
+            notes: newRecord.notes,
+            history: newRecord.history,
+          }]);
+        }
+
+        const { error: logErr } = await supabase.from('activity_logs').insert([{
           id: newLog.id,
           timestamp: newLog.timestamp,
           user_name: newLog.user,
@@ -282,8 +315,12 @@ export default function App() {
           action: newLog.action,
           detail: newLog.detail,
         }]);
+
+        if (logErr) {
+          console.error('Error guardando log en Supabase:', logErr);
+        }
       } catch (err) {
-        console.error('Error saving to Supabase:', err);
+        console.error('Error general al guardar en Supabase:', err);
       }
     }
   };
