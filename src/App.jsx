@@ -427,47 +427,62 @@ export default function App() {
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error: eqErr } = await supabase.from('equipment').insert([{
+        const fullPayload = {
           id: newRecord.id,
           name: newRecord.name,
           category: newRecord.category,
           serial_number: newRecord.serialNumber,
           owner_name: newRecord.ownerName,
-          owner_phone: newRecord.ownerPhone,
-          owner_email: newRecord.ownerEmail,
+          owner_phone: newRecord.ownerPhone || null,
+          owner_email: newRecord.ownerEmail || null,
           issue: newRecord.issue,
           priority: newRecord.priority,
           status: newRecord.status,
-          technician_assigned: newRecord.technicianAssigned,
+          technician_assigned: newRecord.technicianAssigned || null,
           created_at: newRecord.createdAt,
-          photo_url: newRecord.photoUrl,
+          photo_url: newRecord.photoUrl || null,
           photos: newRecord.photos || [],
-          notes: newRecord.notes,
-          history: newRecord.history,
-        }]);
+          notes: newRecord.notes || [],
+          history: newRecord.history || [],
+        };
+
+        const { error: eqErr } = await supabase.from('equipment').insert([fullPayload]);
 
         if (eqErr) {
-          console.error('Error guardando equipo en Supabase:', eqErr);
-          // If insert error is related to image payload, attempt insert without photo_url/photos
-          console.warn('Reintentando guardar equipo en Supabase sin imagen...');
-          await supabase.from('equipment').insert([{
-            id: newRecord.id,
-            name: newRecord.name,
-            category: newRecord.category,
-            serial_number: newRecord.serialNumber,
-            owner_name: newRecord.ownerName,
-            owner_phone: newRecord.ownerPhone,
-            owner_email: newRecord.ownerEmail,
-            issue: newRecord.issue,
-            priority: newRecord.priority,
-            status: newRecord.status,
-            technician_assigned: newRecord.technicianAssigned,
-            created_at: newRecord.createdAt,
-            photo_url: null,
-            photos: [],
-            notes: newRecord.notes,
-            history: newRecord.history,
-          }]);
+          console.error('Error al guardar equipo completo en Supabase:', eqErr);
+          
+          // Fallback 1: Remove base64 photos/photo_url keys completely to avoid column missing or payload size errors
+          console.warn('Reintentando guardar equipo en Supabase sin llaves de imagenes...');
+          const fallbackPayload1 = { ...fullPayload };
+          delete fallbackPayload1.photos;
+          delete fallbackPayload1.photo_url;
+
+          const { error: retryErr1 } = await supabase.from('equipment').insert([fallbackPayload1]);
+
+          if (retryErr1) {
+            console.error('Error en reintento 1 de Supabase:', retryErr1);
+            
+            // Fallback 2: Basic core payload only
+            const minimalPayload = {
+              id: newRecord.id,
+              name: newRecord.name,
+              category: newRecord.category,
+              serial_number: newRecord.serialNumber,
+              owner_name: newRecord.ownerName,
+              owner_phone: newRecord.ownerPhone || null,
+              owner_email: newRecord.ownerEmail || null,
+              issue: newRecord.issue,
+              priority: newRecord.priority,
+              status: newRecord.status,
+              created_at: newRecord.createdAt,
+            };
+
+            const { error: retryErr2 } = await supabase.from('equipment').insert([minimalPayload]);
+            if (retryErr2) {
+              console.error('Error fatal al guardar equipo en Supabase:', retryErr2);
+              alert(`Atención: El equipo (${newRecord.id}) quedó registrado en la aplicación local pero no se pudo sincronizar en la tabla "equipment" de Supabase.\n\nMotivo: ${retryErr2.message || 'Error de permisos RLS o la tabla equipment requiere actualización SQL.'}\n\nRevisa el archivo supabase_schema.sql para ejecutar las políticas SQL necesarias.`);
+            }
+          }
         }
 
         const { error: logErr } = await supabase.from('activity_logs').insert([{
