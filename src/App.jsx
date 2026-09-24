@@ -207,25 +207,17 @@ export default function App() {
     fetchSupabaseData();
   }, []);
 
-  // 10-Second Automatic Background Sync to Supabase
+  // Automatic Background Sync to Supabase (Pulls cloud updates & syncs offline pending items)
   const syncLocalToSupabase = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || equipmentList.length === 0) return;
+    if (!isSupabaseConfigured || !supabase) return;
 
     try {
       setIsSyncing(true);
-      const { data: remoteData, error: remoteErr } = await supabase.from('equipment').select('id');
-      if (remoteErr) {
-        console.warn('Notice Auto-Sync: no se pudieron obtener los IDs de Supabase:', remoteErr);
-        setIsSyncing(false);
-        return;
-      }
 
-      const remoteIds = new Set((remoteData || []).map((i) => i.id));
-      const unSyncedItems = equipmentList.filter((localItem) => !isMockEquipmentId(localItem.id, localItem.createdAt || localItem.created_at) && !remoteIds.has(localItem.id));
-
-      if (unSyncedItems.length > 0) {
-        console.log(`[Auto-Sync 10s] Subiendo ${unSyncedItems.length} equipos faltantes a la nube Supabase...`);
-        for (const item of unSyncedItems) {
+      // 1. Push any items created offline that explicitly require sync
+      const pendingItems = equipmentList.filter((item) => item._needsSync);
+      if (pendingItems.length > 0) {
+        for (const item of pendingItems) {
           const fullPayload = {
             id: item.id,
             name: item.name,
@@ -245,35 +237,51 @@ export default function App() {
             notes: item.notes || [],
             history: item.history || [],
           };
-
-          const { error: insertErr } = await supabase.from('equipment').insert([fullPayload]);
-          if (insertErr) {
-            console.warn(`[Auto-Sync] Reintentando ${item.id} sin llaves de fotos:`, insertErr);
-            const fallbackPayload = { ...fullPayload };
-            delete fallbackPayload.photos;
-            delete fallbackPayload.photo_url;
-
-            const { error: retryErr1 } = await supabase.from('equipment').insert([fallbackPayload]);
-            if (retryErr1) {
-              console.warn(`[Auto-Sync] Reintentando ${item.id} con columnas esenciales:`, retryErr1);
-              const minimalPayload = {
-                id: item.id,
-                name: item.name,
-                category: item.category,
-                serial_number: item.serialNumber,
-                owner_name: item.ownerName,
-                owner_phone: item.ownerPhone || null,
-                owner_email: item.ownerEmail || null,
-                issue: item.issue,
-                priority: item.priority,
-                status: item.status,
-                created_at: item.createdAt,
-              };
-              await supabase.from('equipment').insert([minimalPayload]);
-            }
+          const { error: insErr } = await supabase.from('equipment').insert([fullPayload]);
+          if (!insErr) {
+            delete item._needsSync;
           }
         }
       }
+
+      // 2. Fetch latest equipment list from Supabase (Cloud is the single source of truth)
+      const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
+      if (!eqErr && eqData) {
+        // Identify and purge any legacy mock items if still present in DB
+        const mockItemsToPurge = eqData.filter(item => isMockEquipmentId(item.id, item.created_at));
+        if (mockItemsToPurge.length > 0) {
+          console.log(`[Supabase Purge] Purgando ${mockItemsToPurge.length} fichas mock de la nube...`);
+          for (const mockItem of mockItemsToPurge) {
+            await supabase.from('equipment').delete().eq('id', mockItem.id);
+          }
+        }
+
+        const filteredData = eqData.filter(item => !isMockEquipmentId(item.id, item.created_at));
+
+        const mapped = filteredData.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          serialNumber: item.serial_number,
+          ownerName: item.owner_name,
+          ownerPhone: item.owner_phone,
+          ownerEmail: item.owner_email,
+          issue: item.issue,
+          priority: item.priority,
+          status: item.status,
+          technicianAssigned: item.technician_assigned,
+          promisedDate: item.promised_date,
+          createdAt: item.created_at,
+          photoUrl: item.photo_url,
+          photos: item.photos || (item.photo_url ? [item.photo_url] : []),
+          notes: item.notes || [],
+          history: item.history || [],
+        }));
+
+        setEquipmentList(mapped);
+        localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
+      }
+
       setLastSyncTime(new Date().toLocaleTimeString());
     } catch (err) {
       console.warn('Error en sincronización automática:', err);
