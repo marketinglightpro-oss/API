@@ -27,15 +27,12 @@ export default function Header({
   ];
 
   const tabs = [
-    { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
-    { id: 'register', label: 'Registrar', icon: PlusCircle },
-    { id: 'scanner', label: 'Escanear QR', icon: QrCode },
-    { id: 'logs', label: 'Historial', icon: Activity },
+    { id: 'reparaciones', label: 'Reparaciones', icon: LayoutGrid },
+    { id: 'equipos', label: 'Equipos / Personal', icon: Users },
+    { id: 'herramientas', label: 'Herramientas', icon: Wrench, badge: 'Próximamente' },
+    { id: 'alquileres', label: 'Alquileres', icon: PlusCircle, badge: 'Próximamente' },
+    { id: 'horarios', label: 'Horarios', icon: Clock, badge: 'Próximamente' },
   ];
-
-  if (currentRole === 'super_admin' || currentRole === 'admin') {
-    tabs.push({ id: 'users', label: 'Usuarios', icon: Users });
-  }
 
   return (
     <>

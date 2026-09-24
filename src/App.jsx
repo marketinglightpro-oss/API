@@ -16,7 +16,7 @@ import { Shield, Wrench, User, Database } from 'lucide-react';
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentRole, setCurrentRole] = useState('super_admin'); // 'super_admin' | 'admin' | 'technician' | 'client'
-  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'register' | 'scanner' | 'logs' | 'users'
+  const [activeTab, setActiveTab] = useState('reparaciones'); // 'reparaciones' | 'equipos' | 'herramientas' | 'alquileres' | 'horarios' | 'logs'
 
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
@@ -739,19 +739,21 @@ export default function App() {
         </div>
       </div>
 
-      {/* Metrics & Filter Hero Header */}
-      <MetricsOverview
-        equipmentList={equipmentList}
-        onOpenRegister={() => setShowRegisterModal(true)}
-        onOpenScanner={() => setShowScannerModal(true)}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
+      {/* Metrics & Filter Hero Header (Shown on Reparaciones View) */}
+      {(activeTab === 'reparaciones' || activeTab === 'kanban') && (
+        <MetricsOverview
+          equipmentList={equipmentList}
+          onOpenRegister={() => setShowRegisterModal(true)}
+          onOpenScanner={() => setShowScannerModal(true)}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
+      )}
 
-      {/* Main Tab Content */}
-      {activeTab === 'kanban' && (
+      {/* Main Tab Content Router */}
+      {(activeTab === 'reparaciones' || activeTab === 'kanban') && (
         <KanbanBoard
           equipmentList={filteredEquipment}
           currentRole={currentRole}
@@ -761,12 +763,40 @@ export default function App() {
         />
       )}
 
+      {(activeTab === 'equipos' || activeTab === 'users') && (
+        <UserManagementView
+          currentUser={currentUser}
+          teamMembers={teamMembers}
+          onUpdateTeamMembers={(updated) => setTeamMembers(updated)}
+        />
+      )}
+
       {activeTab === 'logs' && (
         <ActivityLogView logs={logs} />
       )}
 
-      {activeTab === 'users' && (
-        <UserManagementView currentUser={currentUser} />
+      {(activeTab === 'herramientas' || activeTab === 'alquileres' || activeTab === 'horarios') && (
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 my-8 animate-fadeIn">
+          <div className="liquid-card rounded-3xl p-8 sm:p-12 text-center bg-white border border-gray-200 shadow-xl space-y-4">
+            <div className="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center mx-auto shadow-lg text-2xl font-bold">
+              ✨
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">
+              Módulo de {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} en Desarrollo
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto leading-relaxed font-medium">
+              Pronto podrás gestionar todos los aspectos de {activeTab} para tu cuenta LIGHTPRO. Estamos trabajando en este módulo.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={() => setActiveTab('reparaciones')}
+                className="liquid-btn-primary px-6 py-2.5 rounded-full text-xs font-bold shadow-md hover:scale-105 transition-all"
+              >
+                Volver a Reparaciones (Kanban)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modals */}
