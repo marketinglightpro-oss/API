@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F2F3F7;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.9) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(225, 227, 235, 0.7) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Soft Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Liquid Glass Utilities */
+.liquid-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 20px 40px -15px rgba(0, 0, 0, 0.05),
+    0 0 1px 1px rgba(255, 255, 255, 0.9) inset;
+}
+
+.liquid-card-dark {
+  background: rgba(18, 19, 22, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
+
+.liquid-btn-primary {
+  background: #121316;
+  color: #FFFFFF;
+  box-shadow: 0 8px 20px -4px rgba(18, 19, 22, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-btn-primary:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 24px -4px rgba(18, 19, 22, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+.liquid-btn-primary:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.liquid-btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #121316;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-btn-secondary:hover {
+  background: #FFFFFF;
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 1);
+}
+
+.liquid-pill-tab {
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0%); opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { transform: translateY(220px); opacity: 0.8; }
+}
+
+.animate-scanline {
+  animation: scanline 2.2s ease-in-out infinite alternate;
+}
