@@ -11,7 +11,7 @@ import UserManagementView from './components/UserManagementView';
 import LoginScreen from './components/LoginScreen';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { Shield, Wrench, User, Database, Lock } from 'lucide-react';
+import { Shield, Wrench, User, Database } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -40,23 +40,54 @@ export default function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showScannerModal, setShowScannerModal] = useState(false);
 
+  // Sync profile & assign Super Admin role for Supabase Auth accounts
+  const syncUserRole = async (user) => {
+    if (!user) return;
+    setCurrentUser(user);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profile && profile.role) {
+          setCurrentRole(profile.role);
+        } else {
+          // If user was created directly in Supabase Auth Dashboard, default role to super_admin!
+          const userRole = user.user_metadata?.role || 'super_admin';
+          setCurrentRole(userRole);
+          await supabase.from('profiles').upsert([{
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email,
+            role: userRole,
+          }]);
+        }
+      } catch (err) {
+        console.warn('Profile sync notice:', err);
+        setCurrentRole(user.user_metadata?.role || 'super_admin');
+      }
+    } else {
+      setCurrentRole(user.user_metadata?.role || 'super_admin');
+    }
+  };
+
   // Supabase Auth State Listener
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        setCurrentUser(user);
-        const metaRole = user.user_metadata?.role || 'super_admin';
-        setCurrentRole(metaRole);
+        syncUserRole(user);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setCurrentUser(session.user);
-        const metaRole = session.user.user_metadata?.role || 'super_admin';
-        setCurrentRole(metaRole);
+        syncUserRole(session.user);
       } else {
         setCurrentUser(null);
       }
@@ -131,7 +162,7 @@ export default function App() {
 
   // Login Success Callback
   const handleLoginSuccess = (user, userRole) => {
-    setCurrentUser(user);
+    syncUserRole(user);
     if (userRole) setCurrentRole(userRole);
   };
 
