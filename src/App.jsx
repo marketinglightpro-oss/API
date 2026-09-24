@@ -13,6 +13,22 @@ import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
+// Helper to filter out legacy mock items (keeps EQ-7434, EQ9864, EQ-9864, and new user equipment)
+const isMockEquipmentId = (id) => {
+  if (!id) return false;
+  const clean = id.toString().trim().toUpperCase();
+  if (clean === 'EQ-7434' || clean === 'EQ9864' || clean === 'EQ-9864') {
+    return false;
+  }
+  return (
+    clean.startsWith('LP-10') ||
+    clean.startsWith('LP-') ||
+    clean.startsWith('MOCK') ||
+    clean.startsWith('TEST') ||
+    clean.startsWith('DEMO')
+  );
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentRole, setCurrentRole] = useState('super_admin'); // 'super_admin' | 'admin' | 'technician' | 'client'
@@ -21,7 +37,13 @@ export default function App() {
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
     const saved = localStorage.getItem('lightpro_equipment');
-    return saved ? JSON.parse(saved) : INITIAL_EQUIPMENT;
+    if (!saved) return INITIAL_EQUIPMENT;
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.filter(item => !isMockEquipmentId(item?.id));
+    } catch (e) {
+      return INITIAL_EQUIPMENT;
+    }
   });
 
   // System Activity Logs State
@@ -109,14 +131,25 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync with Supabase Database Tables on Mount
+  // Sync with Supabase Database Tables on Mount & Purge Legacy Mock Data
   useEffect(() => {
     const fetchSupabaseData = async () => {
       if (!isSupabaseConfigured || !supabase) return;
       try {
         const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
         if (!eqErr && eqData) {
-          const mapped = eqData.map(item => ({
+          // Identify mock items in Supabase DB to purge
+          const mockItemsToPurge = eqData.filter(item => isMockEquipmentId(item.id));
+          if (mockItemsToPurge.length > 0) {
+            console.log(`[Supabase Purge] Purgando ${mockItemsToPurge.length} fichas mock de la nube...`);
+            for (const mockItem of mockItemsToPurge) {
+              await supabase.from('equipment').delete().eq('id', mockItem.id);
+            }
+          }
+
+          const filteredData = eqData.filter(item => !isMockEquipmentId(item.id));
+
+          const mapped = filteredData.map(item => ({
             id: item.id,
             name: item.name,
             category: item.category,
@@ -136,7 +169,6 @@ export default function App() {
             history: item.history || [],
           }));
           
-          // Set equipmentList directly from Supabase (Supabase is authoritative)
           setEquipmentList(mapped);
           localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
         }
