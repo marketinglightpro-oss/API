@@ -130,65 +130,66 @@ export default function EquipmentDetailModal({
     : item.photoUrl ? [item.photoUrl] : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="liquid-card bg-white/95 backdrop-blur-2xl rounded-3xl max-w-6xl w-full border border-white/80 shadow-2xl overflow-hidden max-h-[94vh] flex flex-col relative">
+    <div className="fixed inset-0 z-50 p-[15px] sm:p-[30px] bg-black/65 backdrop-blur-xl flex items-center justify-center animate-fadeIn">
+      <div className="liquid-card bg-white/95 backdrop-blur-3xl rounded-[28px] w-full h-full max-w-none max-h-none border border-white/90 shadow-2xl overflow-hidden flex flex-col relative">
         
         {/* Jira-Style Top Navigation & Header Bar */}
-        <div className="px-5 py-3.5 border-b border-gray-200/80 bg-gray-50/80 flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="px-6 sm:px-8 py-4 border-b border-gray-200/80 bg-white/90 backdrop-blur-md flex items-center justify-between gap-4 flex-shrink-0">
           
           {/* Left Breadcrumb & Asset Key */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-mono font-extrabold bg-black text-white px-2.5 py-1 rounded-lg text-xs shadow-sm">
+          <div className="flex items-center gap-2.5 text-xs">
+            <span className="font-mono font-extrabold bg-black text-white px-3 py-1 rounded-xl text-xs shadow-md">
               {item.id}
             </span>
-            <span className="text-gray-400 font-bold">/</span>
-            <span className="font-mono text-gray-500 bg-gray-200/70 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+            <span className="text-gray-300 font-bold">/</span>
+            <span className="font-mono text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200">
               S/N: {item.serialNumber}
             </span>
-            <span className="text-gray-400 font-bold hidden sm:inline">/</span>
-            <span className="hidden sm:inline-block font-semibold text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-full text-[11px]">
+            <span className="text-gray-300 font-bold hidden sm:inline">/</span>
+            <span className="hidden sm:inline-block font-semibold text-gray-700 bg-gray-100/90 px-3 py-0.5 rounded-full text-[11px] border border-gray-200">
               {item.category}
             </span>
           </div>
 
-          {/* Right Action Bar: Status Pill & Action Icons */}
-          <div className="flex items-center gap-2">
+          {/* Right Action Bar: Status Select & Action Buttons */}
+          <div className="flex items-center gap-2.5">
             
             {/* Quick Status Select Button */}
             {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') ? (
               <select
                 value={item.status}
                 onChange={(e) => onUpdateStatus(item.id, e.target.value)}
-                className="bg-black text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-md border border-gray-800 cursor-pointer focus:outline-none hover:bg-gray-900 transition-colors"
+                className="bg-black text-white font-extrabold text-xs px-3.5 py-2 rounded-2xl shadow-md border border-gray-800 cursor-pointer focus:outline-none hover:bg-gray-900 transition-all"
               >
                 {KANBAN_STAGES.map((s) => (
                   <option key={s.id} value={s.id}>Etapa: {s.step}. {s.title}</option>
                 ))}
               </select>
             ) : (
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border shadow-sm ${currentStage.badgeBg}`}>
+              <span className={`text-xs font-bold px-3.5 py-1.5 rounded-2xl border shadow-sm ${currentStage.badgeBg}`}>
                 {currentStage.title}
               </span>
             )}
 
             <button
               onClick={() => onOpenQRModal(item)}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 transition-colors shadow-sm"
-              title="Ver / Imprimir QR"
+              className="p-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-900 transition-all shadow-sm border border-gray-200"
+              title="Ver / Imprimir Etiqueta QR"
             >
               <QrCode className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-gray-200/80 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-black transition-colors"
+              className="w-9 h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-600 transition-all shadow-sm"
+              title="Cerrar Ficha"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* 2-Column Jira Main Layout (Scrollable Body) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* 2-Column Jira Main Layout (Scrollable Body with 30px Padding) */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 md:p-[30px] grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-[30px]">
           
           {/* LEFT COLUMN: Title, Description, Damage Photos & Activity Tabs (Jira Ratio ~ 68% -> lg:col-span-8) */}
           <div className="lg:col-span-8 space-y-6">
