@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
-import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogOut, Users, CheckCheck, Clock, ChevronRight } from 'lucide-react';
+import { Shield, Wrench, User, Bell, QrCode, PlusCircle, LayoutGrid, Activity, LogOut, Users, CheckCheck, Clock, ChevronRight, RefreshCw, Cloud } from 'lucide-react';
 
-export default function Header({ currentRole, setCurrentRole, activeTab, setActiveTab, currentUser, onSignOut, notifications = [], onMarkNotificationsRead, onSelectNotification }) {
+export default function Header({
+  currentRole,
+  setCurrentRole,
+  activeTab,
+  setActiveTab,
+  currentUser,
+  onSignOut,
+  notifications = [],
+  onMarkNotificationsRead,
+  onSelectNotification,
+  isSyncing = false,
+  lastSyncTime = null,
+  onForceSync,
+}) {
   const [showNotifications, setShowNotifications] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -66,8 +79,25 @@ export default function Header({ currentRole, setCurrentRole, activeTab, setActi
           {/* Right Section: Role Indicator, User Profile & Logout & Notification Bell */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 relative">
             
+            {/* Cloud Auto-Sync Indicator Button */}
+            {onForceSync && (
+              <button
+                onClick={onForceSync}
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${
+                  isSyncing
+                    ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 shadow-xs'
+                }`}
+                title="Guardado automático a Supabase cada 10s. Haz clic para sincronizar ahora."
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-600' : 'text-emerald-600'}`} />
+                <span>{isSyncing ? 'Sincronizando...' : 'Auto-Sync 10s'}</span>
+              </button>
+            )}
+
             {/* Role Switcher Pill */}
             <div className="hidden sm:flex items-center bg-white/90 p-1 rounded-full shadow-inner border border-gray-200 text-xs">
+
               {roles.map((r) => {
                 const Icon = r.icon;
                 const isSelected = currentRole === r.id;

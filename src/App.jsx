@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import MetricsOverview from './components/MetricsOverview';
 import KanbanBoard from './components/KanbanBoard';
@@ -29,6 +29,10 @@ export default function App() {
     const saved = localStorage.getItem('lightpro_logs');
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
   });
+
+  // Auto-Sync Cloud State
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
 
   // Team Members / Staff State
   const [teamMembers, setTeamMembers] = useState([
@@ -190,6 +194,99 @@ export default function App() {
 
     fetchSupabaseData();
   }, []);
+
+  // 10-Second Automatic Background Sync to Supabase
+  const syncLocalToSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase || equipmentList.length === 0) return;
+
+    try {
+      setIsSyncing(true);
+      const { data: remoteData, error: remoteErr } = await supabase.from('equipment').select('id');
+      if (remoteErr) {
+        console.warn('Notice Auto-Sync: no se pudieron obtener los IDs de Supabase:', remoteErr);
+        setIsSyncing(false);
+        return;
+      }
+
+      const remoteIds = new Set((remoteData || []).map((i) => i.id));
+      const unSyncedItems = equipmentList.filter((localItem) => !remoteIds.has(localItem.id));
+
+      if (unSyncedItems.length > 0) {
+        console.log(`[Auto-Sync 10s] Subiendo ${unSyncedItems.length} equipos faltantes a la nube Supabase...`);
+        for (const item of unSyncedItems) {
+          const fullPayload = {
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            serial_number: item.serialNumber,
+            owner_name: item.ownerName,
+            owner_phone: item.ownerPhone || null,
+            owner_email: item.ownerEmail || null,
+            issue: item.issue,
+            priority: item.priority,
+            status: item.status,
+            technician_assigned: item.technicianAssigned || null,
+            promised_date: item.promisedDate || null,
+            created_at: item.createdAt,
+            photo_url: item.photoUrl || null,
+            photos: item.photos || [],
+            notes: item.notes || [],
+            history: item.history || [],
+          };
+
+          const { error: insertErr } = await supabase.from('equipment').insert([fullPayload]);
+          if (insertErr) {
+            console.warn(`[Auto-Sync] Reintentando ${item.id} sin llaves de fotos:`, insertErr);
+            const fallbackPayload = { ...fullPayload };
+            delete fallbackPayload.photos;
+            delete fallbackPayload.photo_url;
+
+            const { error: retryErr1 } = await supabase.from('equipment').insert([fallbackPayload]);
+            if (retryErr1) {
+              console.warn(`[Auto-Sync] Reintentando ${item.id} con columnas esenciales:`, retryErr1);
+              const minimalPayload = {
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                serial_number: item.serialNumber,
+                owner_name: item.ownerName,
+                owner_phone: item.ownerPhone || null,
+                owner_email: item.ownerEmail || null,
+                issue: item.issue,
+                priority: item.priority,
+                status: item.status,
+                created_at: item.createdAt,
+              };
+              await supabase.from('equipment').insert([minimalPayload]);
+            }
+          }
+        }
+      }
+      setLastSyncTime(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.warn('Error en sincronización automática:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [equipmentList]);
+
+  // Execute background sync interval every 10 seconds
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const initialTimeout = setTimeout(() => {
+      syncLocalToSupabase();
+    }, 2000);
+
+    const interval = setInterval(() => {
+      syncLocalToSupabase();
+    }, 10000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [syncLocalToSupabase]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -615,6 +712,9 @@ export default function App() {
             if (eq) setSelectedItem(eq);
           }
         }}
+        isSyncing={isSyncing}
+        lastSyncTime={lastSyncTime}
+        onForceSync={syncLocalToSupabase}
       />
 
       {/* Role & Database Status Notice Banner */}
