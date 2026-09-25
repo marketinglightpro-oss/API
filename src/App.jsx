@@ -114,6 +114,46 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+const extractEquipmentId = (text) => {
+  if (!text) return null;
+  const match = text.match(/EQ-\d+/i);
+  return match ? match[0].toUpperCase() : null;
+};
+
+const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
+  if (!isSupabaseConfigured || !supabase) return;
+  try {
+    const eqId = equipmentId || newLog.equipmentId || extractEquipmentId(newLog.detail);
+    const payloadWithEq = {
+      id: newLog.id,
+      timestamp: newLog.timestamp,
+      user_name: newLog.user,
+      role: newLog.role,
+      action: newLog.action,
+      detail: newLog.detail,
+    };
+    if (eqId) {
+      payloadWithEq.equipment_id = eqId;
+    }
+
+    const { error: logErr1 } = await supabase.from('activity_logs').insert([payloadWithEq]);
+    if (logErr1) {
+      console.warn('Reintentando guardar log sin llave equipment_id:', logErr1.message);
+      const payloadBasic = {
+        id: newLog.id,
+        timestamp: newLog.timestamp,
+        user_name: newLog.user,
+        role: newLog.role,
+        action: newLog.action,
+        detail: newLog.detail,
+      };
+      await supabase.from('activity_logs').insert([payloadBasic]);
+    }
+  } catch (err) {
+    console.error('Error en saveActivityLogToSupabase:', err);
+  }
+};
+
   // Fetch data from Supabase Database
   const fetchSupabaseData = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -157,8 +197,14 @@ export default function App() {
           role: l.role,
           action: l.action,
           detail: l.detail,
+          equipmentId: l.equipment_id || extractEquipmentId(l.detail),
         }));
-        setLogs(mappedLogs);
+
+        setLogs((prevLocal) => {
+          const remoteIds = new Set(mappedLogs.map(m => m.id));
+          const unsyncedLocal = prevLocal.filter(p => !remoteIds.has(p.id));
+          return [...unsyncedLocal, ...mappedLogs];
+        });
       }
 
       const { data: profileData, error: profErr } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
@@ -364,14 +410,7 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('equipment').update({ status: targetStageId, history: newHistory }).eq('id', itemId);
-        await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
+        await saveActivityLogToSupabase(newLog, itemId);
       } catch (err) {
         console.error('Error updating Supabase:', err);
       }
@@ -398,7 +437,8 @@ export default function App() {
       user: authorName,
       role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Técnico Asignado',
-      detail: `Equipo ${targetItem?.name || itemId} asignado a ${technicianName}`,
+      detail: `Equipo ${targetItem?.name || itemId} (${itemId}) asignado a ${technicianName}`,
+      equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -417,14 +457,7 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('equipment').update({ technician_assigned: technicianName }).eq('id', itemId);
-        await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
+        await saveActivityLogToSupabase(newLog, itemId);
       } catch (err) {
         console.error('Error updating technician in Supabase:', err);
       }
@@ -451,7 +484,8 @@ export default function App() {
       user: authorName,
       role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Promesa de Reparación',
-      detail: `Fecha promesa de entrega para ${targetItem?.name || itemId}: ${dateStr}`,
+      detail: `Fecha promesa de entrega para ${targetItem?.name || itemId} (${itemId}): ${dateStr}`,
+      equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -470,14 +504,7 @@ export default function App() {
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('equipment').update({ promised_date: dateStr }).eq('id', itemId);
-        await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
+        await saveActivityLogToSupabase(newLog, itemId);
       } catch (err) {
         console.error('Error updating promised date in Supabase:', err);
       }
@@ -504,6 +531,7 @@ export default function App() {
       role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Equipo Registrado',
       detail: `Nuevo equipo registrado por ${authorName}: ${newRecord.name} (${newRecord.id}) - Serie: ${newRecord.serialNumber}`,
+      equipmentId: newRecord.id,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -575,18 +603,7 @@ export default function App() {
           }
         }
 
-        const { error: logErr } = await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
-
-        if (logErr) {
-          console.error('Error guardando log en Supabase:', logErr);
-        }
+        await saveActivityLogToSupabase(newLog, newRecord.id);
       } catch (err) {
         console.error('Error general al guardar en Supabase:', err);
       }
@@ -621,6 +638,7 @@ export default function App() {
       role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
       action: 'Equipo Eliminado',
       detail: `Ficha de equipo ${targetItem.name} (${itemId}) eliminada permanentemente.`,
+      equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -633,14 +651,7 @@ export default function App() {
         } else {
           console.log(`[Supabase Delete] Equipo ${itemId} eliminado exitosamente de la nube.`);
         }
-        await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
+        await saveActivityLogToSupabase(newLog, itemId);
       } catch (err) {
         console.error('Error enviando borrado a Supabase:', err);
       }
@@ -667,7 +678,8 @@ export default function App() {
       user: authorName,
       role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
       action: 'Ficha Actualizada',
-      detail: `Ficha de equipo ${updatedFields.name || itemId} fue actualizada por ${authorName}.`,
+      detail: `Ficha de equipo ${updatedFields.name || itemId} (${itemId}) fue actualizada por ${authorName}.`,
+      equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -692,14 +704,7 @@ export default function App() {
           console.error('Error actualizando equipo en Supabase:', updErr);
         }
 
-        await supabase.from('activity_logs').insert([{
-          id: newLog.id,
-          timestamp: newLog.timestamp,
-          user_name: newLog.user,
-          role: newLog.role,
-          action: newLog.action,
-          detail: newLog.detail,
-        }]);
+        await saveActivityLogToSupabase(newLog, itemId);
       } catch (err) {
         console.error('Error enviando actualización a Supabase:', err);
       }
