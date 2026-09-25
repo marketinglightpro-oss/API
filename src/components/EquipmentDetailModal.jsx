@@ -602,32 +602,32 @@ export default function EquipmentDetailModal({
                 <div className="space-y-4">
                   
                   {/* Jira Style Comment Box */}
-                  <form onSubmit={handleAddNoteSubmit} className="bg-white p-4 rounded-2xl border border-gray-200 space-y-3 shadow-sm">
+                  <form onSubmit={handleAddNoteSubmit} className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 space-y-3 shadow-md">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white flex items-center justify-center font-extrabold text-xs flex-shrink-0 shadow-sm">
                         {(currentUser?.user_metadata?.full_name || currentUser?.email || 'U')[0].toUpperCase()}
                       </div>
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 space-y-2.5">
                         <textarea
                           rows={2}
                           value={newNoteText}
                           onChange={(e) => setNewNoteText(e.target.value)}
                           placeholder="Añadir un comentario u observación técnica sobre la reparación..."
-                          className="w-full bg-white border border-gray-200 rounded-xl p-3 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                          className="w-full bg-slate-50/50 border border-gray-300 rounded-2xl p-3.5 text-xs text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black transition-all shadow-xs"
                         />
 
                         {/* Evidence Draft Preview */}
                         {notePhotos.length > 0 && (
-                          <div className="flex items-center gap-2 p-2 bg-white rounded-xl border border-gray-200">
-                            <span className="text-[10px] font-semibold text-gray-500">Evidencias:</span>
-                            <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-gray-200">
+                            <span className="text-[10px] font-extrabold text-gray-500 uppercase">Evidencias:</span>
+                            <div className="flex items-center gap-2 flex-wrap">
                               {notePhotos.map((photo, idx) => (
-                                <div key={idx} className="relative w-10 h-10 rounded-lg overflow-hidden border border-gray-300">
+                                <div key={idx} className="relative w-12 h-12 rounded-xl overflow-hidden border border-gray-300 shadow-xs">
                                   <img src={photo} alt={`Evidencia ${idx}`} className="w-full h-full object-cover" />
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveNotePhoto(idx)}
-                                    className="absolute top-0 right-0 p-0.5 bg-red-600 text-white rounded-bl"
+                                    className="absolute top-0 right-0 p-1 bg-red-600 text-white rounded-bl-lg hover:bg-red-700"
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -641,7 +641,7 @@ export default function EquipmentDetailModal({
                           <button
                             type="button"
                             onClick={() => notePhotoInputRef.current?.click()}
-                            className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                            className="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
                           >
                             <Camera className="w-3.5 h-3.5 text-black" />
                             <span>Adjuntar Evidencia Foto</span>
@@ -657,7 +657,7 @@ export default function EquipmentDetailModal({
 
                           <button
                             type="submit"
-                            className="liquid-btn-primary px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                            className="liquid-btn-primary px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-md"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             <span>Guardar Comentario</span>
@@ -670,41 +670,68 @@ export default function EquipmentDetailModal({
                   {/* Notes Feed */}
                   <div className="space-y-3">
                     {(!item.notes || item.notes.length === 0) ? (
-                      <p className="text-xs text-gray-400 italic p-4 bg-white border border-gray-200 rounded-2xl text-center">No hay comentarios técnicos registrados aún.</p>
+                      <p className="text-xs text-gray-400 italic p-5 bg-white border border-gray-200 rounded-2xl text-center shadow-xs">
+                        No hay comentarios técnicos registrados aún.
+                      </p>
                     ) : (
                       item.notes.map((note) => (
-                        <div key={note.id} className="p-4 rounded-2xl bg-white border border-gray-200 text-xs space-y-2 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px]">
-                                {note.author ? note.author[0].toUpperCase() : 'T'}
+                        <div
+                          key={note.id}
+                          className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 hover:bg-slate-50 border border-gray-200 text-xs space-y-3 shadow-sm transition-all"
+                        >
+                          {/* Header: Author Avatar, Info, Role, & Timestamp */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/60 pb-2.5">
+                            <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white flex items-center justify-center font-extrabold text-xs shadow-xs flex-shrink-0">
+                                {note.author ? note.author[0].toUpperCase() : 'U'}
                               </div>
-                              <span className="font-extrabold text-gray-900">{note.author}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black text-white">
-                                {note.role}
+                              
+                              <span className="font-extrabold text-gray-900 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-none">
+                                {note.author || 'Usuario'}
+                              </span>
+
+                              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-black text-white shadow-xs tracking-wide">
+                                {note.role || 'Usuario'}
                               </span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono">
-                              {new Date(note.date).toLocaleString()}
-                            </span>
+
+                            <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono font-semibold bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-xs self-start sm:self-auto">
+                              <Clock className="w-3 h-3 text-gray-400" />
+                              <span>
+                                {new Date(note.date).toLocaleString('es-ES', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
                           </div>
 
-                          {note.text && <p className="text-gray-800 leading-relaxed font-medium pl-8">{note.text}</p>}
+                          {/* Text Content */}
+                          {note.text && (
+                            <p className="text-gray-800 leading-relaxed text-xs sm:text-sm font-medium whitespace-pre-wrap pl-0 sm:pl-1">
+                              {note.text}
+                            </p>
+                          )}
 
-                          {/* Evidence photos */}
+                          {/* Photos / Evidence Attachments */}
                           {note.photos && note.photos.length > 0 && (
-                            <div className="pl-8 pt-1">
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5">Evidencias Adjuntas:</span>
+                            <div className="pt-2 border-t border-gray-200/60">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 block mb-2">
+                                Evidencias Adjuntas ({note.photos.length}):
+                              </span>
                               <div className="flex flex-wrap gap-2">
                                 {note.photos.map((ph, idx) => (
                                   <div
                                     key={idx}
                                     onClick={() => setSelectedPreviewPhoto(ph)}
-                                    className="w-16 h-16 rounded-xl overflow-hidden border border-gray-300 bg-black cursor-pointer hover:border-black transition-all relative group shadow-sm"
+                                    className="w-20 h-20 rounded-xl overflow-hidden border border-gray-300 bg-black cursor-pointer hover:border-black hover:scale-105 transition-all relative group shadow-sm"
                                   >
                                     <img src={ph} alt={`Evidencia ${idx + 1}`} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                                      <Eye className="w-4 h-4 text-white" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                      <Eye className="w-5 h-5 text-white" />
                                     </div>
                                   </div>
                                 ))}
