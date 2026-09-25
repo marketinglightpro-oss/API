@@ -1,11 +1,28 @@
 import React from 'react';
-import { Package, Wrench, CheckCircle2, AlertTriangle, QrCode, PlusCircle, Search } from 'lucide-react';
+import { Package, Wrench, CheckCircle2, AlertTriangle, QrCode, PlusCircle, Search, Clock, ShieldAlert } from 'lucide-react';
 
 export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenScanner, activeCategory, setActiveCategory, searchQuery, setSearchQuery }) {
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const total = equipmentList.length;
   const inRepair = equipmentList.filter(e => e.status === 'in_repair' || e.status === 'diagnostic').length;
   const ready = equipmentList.filter(e => e.status === 'ready').length;
   const urgent = equipmentList.filter(e => e.priority === 'Urgente' || e.priority === 'Urgent').length;
+
+  // Active tickets with promisedDate due today or overdue (promisedDate <= todayStr AND not ready)
+  const dueOrOverdue = equipmentList.filter(e => e.promisedDate && e.status !== 'ready' && e.promisedDate <= todayStr).length;
+
+  // Delivered on time (ready status, AND if promisedDate existed, delivered on or before promisedDate)
+  const deliveredOnTime = equipmentList.filter(e => {
+    if (e.status !== 'ready') return false;
+    if (!e.promisedDate) return true;
+    const readyHistoryItem = (e.history || []).find(h => h.stage === 'ready');
+    if (readyHistoryItem && readyHistoryItem.timestamp) {
+      const deliveredDateStr = readyHistoryItem.timestamp.split('T')[0];
+      return deliveredDateStr <= e.promisedDate;
+    }
+    return true;
+  }).length;
 
   const categories = ['Todos', 'Audio', 'Iluminación', 'Rigging', 'Video', 'Energía'];
 
@@ -49,47 +66,81 @@ export default function MetricsOverview({ equipmentList, onOpenRegister, onOpenS
           </div>
         </div>
 
-        {/* Quick Stat Bar Grid - Full Width */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200/60 w-full">
-          <div className="bg-white/70 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2.5 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
-              <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+        {/* Quick Stat Bar Grid - 6 Metric KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5 mt-4 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200/60 w-full">
+          
+          {/* Total Equipos */}
+          <div className="bg-white/80 p-3 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
+              <Package className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">TOTAL EQUIPOS</p>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{total}</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">TOTAL EQUIPOS</p>
+              <p className="text-base font-bold text-gray-900">{total}</p>
             </div>
           </div>
 
-          <div className="bg-white/70 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2.5 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-amber-200">
-              <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+          {/* En Reparación */}
+          <div className="bg-white/80 p-3 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs shadow-amber-200">
+              <Wrench className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">EN REPARACIÓN</p>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{inRepair}</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">EN REPARACIÓN</p>
+              <p className="text-base font-bold text-gray-900">{inRepair}</p>
             </div>
           </div>
 
-          <div className="bg-white/70 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2.5 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-200">
-              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          {/* Entregados A Tiempo */}
+          <div className="bg-white/80 p-3 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs shadow-emerald-200">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">ENTREGADOS</p>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{ready}</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">A TIEMPO</p>
+              <p className="text-base font-bold text-emerald-700">{deliveredOnTime}</p>
             </div>
           </div>
 
-          <div className="bg-white/70 p-3 sm:p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-2.5 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-red-200">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+          {/* En Vencimiento / Hoy (Rojo Urgente) */}
+          <div className={`p-3 rounded-2xl border shadow-xs flex items-center gap-2.5 transition-all ${
+            dueOrOverdue > 0 
+              ? 'bg-red-50/90 border-red-200 ring-2 ring-red-400/30 animate-pulse' 
+              : 'bg-white/80 border-gray-100'
+          }`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-xs ${
+              dueOrOverdue > 0 ? 'bg-red-600 text-white shadow-red-200' : 'bg-gray-200 text-gray-600'
+            }`}>
+              <AlertTriangle className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">URGENTES</p>
-              <p className="text-base sm:text-xl font-bold text-gray-900">{urgent}</p>
+              <p className="text-[9px] font-extrabold text-red-700 uppercase tracking-tight">EN VENCIMIENTO</p>
+              <p className={`text-base font-black ${dueOrOverdue > 0 ? 'text-red-700' : 'text-gray-900'}`}>{dueOrOverdue}</p>
             </div>
           </div>
+
+          {/* Entregados Total */}
+          <div className="bg-white/80 p-3 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">ENTREGADOS</p>
+              <p className="text-base font-bold text-gray-900">{ready}</p>
+            </div>
+          </div>
+
+          {/* Urgentes */}
+          <div className="bg-white/80 p-3 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs shadow-orange-200">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">URGENTES</p>
+              <p className="text-base font-bold text-gray-900">{urgent}</p>
+            </div>
+          </div>
+
         </div>
       </div>
 

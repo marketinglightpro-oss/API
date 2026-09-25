@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar, Trash2, Clock } from 'lucide-react';
+import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar, Trash2, Clock, AlertTriangle } from 'lucide-react';
 
 const formatCreationDate = (dateStr) => {
   if (!dateStr) return null;
@@ -17,6 +17,12 @@ const formatCreationDate = (dateStr) => {
   } catch (e) {
     return dateStr;
   }
+};
+
+const isPromisedDateDue = (promisedDateStr, status) => {
+  if (!promisedDateStr || status === 'ready') return false;
+  const todayStr = new Date().toISOString().split('T')[0];
+  return promisedDateStr <= todayStr;
 };
 
 export default function KanbanBoard({
@@ -180,30 +186,28 @@ export default function KanbanBoard({
                         )}
                       </div>
 
-                      {/* Creation Date Badge */}
-                      {item.createdAt && (
-                        <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                      {/* Creation & Promised Date Badges */}
+                      <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                        {item.createdAt && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-700 bg-gray-100/90 px-2 py-0.5 rounded-md border border-gray-200">
                             <Clock className="w-3 h-3 text-gray-500" />
                             Ingreso: {formatCreationDate(item.createdAt)}
                           </span>
-                          {item.promisedDate && (
+                        )}
+                        {item.promisedDate && (
+                          isPromisedDateDue(item.promisedDate, item.status) ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-red-900 bg-red-100 px-2 py-0.5 rounded-md border border-red-300 animate-pulse shadow-xs" title="¡Atención: Promesa de Entrega Vencida o Vence Hoy!">
+                              <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                              Promesa: {item.promisedDate} (¡Hoy/Vencido!)
+                            </span>
+                          ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
                               <Calendar className="w-3 h-3 text-amber-700" />
                               Promesa: {item.promisedDate}
                             </span>
-                          )}
-                        </div>
-                      )}
-
-                      {!item.createdAt && item.promisedDate && (
-                        <div className="mb-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
-                            <Calendar className="w-3 h-3 text-amber-700" />
-                            Promesa: {item.promisedDate}
-                          </span>
-                        </div>
-                      )}
+                          )
+                        )}
+                      </div>
 
                       {/* Issue Preview */}
                       <p className="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-2 italic">

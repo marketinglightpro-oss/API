@@ -72,6 +72,12 @@ export default function EquipmentDetailModal({
     }
   };
 
+  const isPromisedDateDue = (promisedDateStr, status) => {
+    if (!promisedDateStr || status === 'ready') return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return promisedDateStr <= todayStr;
+  };
+
   const currentStage = KANBAN_STAGES.find((s) => s.id === item.status) || KANBAN_STAGES[0];
 
   const getRoleLabel = (role) => {
@@ -671,19 +677,38 @@ export default function EquipmentDetailModal({
                   </div>
 
                   {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') ? (
-                    <input
-                      type="date"
-                      value={item.promisedDate || ''}
-                      onChange={(e) => onSetPromisedDate && onSetPromisedDate(item.id, e.target.value)}
-                      className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
-                    />
+                    <div className="space-y-1">
+                      <input
+                        type="date"
+                        value={item.promisedDate || ''}
+                        onChange={(e) => onSetPromisedDate && onSetPromisedDate(item.id, e.target.value)}
+                        className={`w-full border rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 ${
+                          isPromisedDateDue(item.promisedDate, item.status)
+                            ? 'bg-red-50 text-red-900 border-red-300 focus:ring-red-500'
+                            : 'bg-white text-gray-900 border-gray-300 focus:ring-black'
+                        }`}
+                      />
+                      {isPromisedDateDue(item.promisedDate, item.status) && (
+                        <p className="text-[10px] font-extrabold text-red-600 flex items-center gap-1 animate-pulse">
+                          <AlertTriangle className="w-3 h-3" />
+                          ¡Atención: Fecha de entrega vencida o vence hoy!
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <div>
                       {item.promisedDate ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {item.promisedDate}
-                        </span>
+                        isPromisedDateDue(item.promisedDate, item.status) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-red-100 text-red-900 border border-red-300 animate-pulse">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                            {item.promisedDate} (¡Hoy/Vencido!)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {item.promisedDate}
+                          </span>
+                        )
                       ) : (
                         <span className="text-gray-400 italic">Por definir</span>
                       )}
