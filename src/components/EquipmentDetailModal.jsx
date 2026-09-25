@@ -36,6 +36,16 @@ export default function EquipmentDetailModal({
   const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
   const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
 
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSaveEdit = () => {
     if (!editName.trim() || !editSerialNumber.trim() || !editOwnerName.trim() || !editIssue.trim()) {
       alert('Por favor completa todos los campos obligatorios (Nombre, Serie, Propietario y Falla).');
@@ -201,9 +211,26 @@ export default function EquipmentDetailModal({
     : item.photoUrl ? [item.photoUrl] : [];
 
   return (
-    <div className="fixed inset-0 z-50 p-2 sm:p-5 lg:p-[30px] bg-black/70 backdrop-blur-xl flex items-center justify-center animate-fadeIn">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 p-2 sm:p-5 lg:p-[30px] bg-black/70 backdrop-blur-xl flex items-center justify-center animate-fadeIn"
+    >
       <div className="liquid-card bg-white rounded-[28px] w-full h-full max-w-none max-h-none border border-gray-200 shadow-2xl overflow-hidden flex flex-col relative">
         
+        {/* Floating Mobile Close Button (X) */}
+        <button
+          onClick={onClose}
+          className="sm:hidden absolute top-3 right-3 z-50 w-9 h-9 rounded-full bg-black text-white flex items-center justify-center shadow-lg border border-white/40 active:scale-95 transition-transform"
+          title="Cerrar ticket"
+          aria-label="Cerrar ticket"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {/* Jira-Style Top Navigation & Header Bar */}
         <div className="px-4 sm:px-8 py-4 border-b border-gray-200 bg-white flex items-center justify-between gap-3 flex-shrink-0 flex-wrap sm:flex-nowrap">
           

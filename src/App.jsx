@@ -16,7 +16,9 @@ import { Shield, Wrench, User, Database } from 'lucide-react';
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentRole, setCurrentRole] = useState('super_admin'); // 'super_admin' | 'admin' | 'technician' | 'client'
-  const [activeTab, setActiveTab] = useState('reparaciones'); // 'reparaciones' | 'equipos' | 'herramientas' | 'alquileres' | 'horarios' | 'logs'
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('lightpro_active_tab') || 'reparaciones';
+  }); // 'reparaciones' | 'equipos' | 'herramientas' | 'alquileres' | 'horarios' | 'logs'
 
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
@@ -323,6 +325,12 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
   useEffect(() => {
     localStorage.setItem('lightpro_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    if (activeTab) {
+      localStorage.setItem('lightpro_active_tab', activeTab);
+    }
+  }, [activeTab]);
 
   // Security Redirect: Prevent technician and client from accessing equipos tab
   useEffect(() => {
