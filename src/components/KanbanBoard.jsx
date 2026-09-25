@@ -1,6 +1,23 @@
 import React, { useState } from 'react';
 import { KANBAN_STAGES } from '../mockData';
-import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, QrCode, User, Wrench, Volume2, Lightbulb, Video, Zap, Anchor, Eye, Calendar, Trash2, Clock } from 'lucide-react';
+
+const formatCreationDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
 
 export default function KanbanBoard({
   equipmentList,
@@ -163,8 +180,23 @@ export default function KanbanBoard({
                         )}
                       </div>
 
-                      {/* Promised Date Badge */}
-                      {item.promisedDate && (
+                      {/* Creation Date Badge */}
+                      {item.createdAt && (
+                        <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-700 bg-gray-100/90 px-2 py-0.5 rounded-md border border-gray-200">
+                            <Clock className="w-3 h-3 text-gray-500" />
+                            Ingreso: {formatCreationDate(item.createdAt)}
+                          </span>
+                          {item.promisedDate && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
+                              <Calendar className="w-3 h-3 text-amber-700" />
+                              Promesa: {item.promisedDate}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {!item.createdAt && item.promisedDate && (
                         <div className="mb-2">
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300/60">
                             <Calendar className="w-3 h-3 text-amber-700" />

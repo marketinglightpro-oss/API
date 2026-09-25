@@ -55,6 +55,23 @@ export default function EquipmentDetailModal({
     setIsEditing(false);
   };
 
+  const formatCreationDate = (dateStr) => {
+    if (!dateStr) return 'Fecha no registrada';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   const currentStage = KANBAN_STAGES.find((s) => s.id === item.status) || KANBAN_STAGES[0];
 
   const getRoleLabel = (role) => {
@@ -213,6 +230,15 @@ export default function EquipmentDetailModal({
               <span className="hidden sm:inline-block font-semibold text-gray-700 bg-white px-3 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
                 {item.category}
               </span>
+            )}
+            {item.createdAt && (
+              <>
+                <span className="text-gray-300 font-bold hidden md:inline">/</span>
+                <span className="hidden md:inline-flex items-center gap-1 font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
+                  <Clock className="w-3 h-3 text-gray-500" />
+                  Creado: {formatCreationDate(item.createdAt)}
+                </span>
+              </>
             )}
           </div>
 
@@ -663,6 +689,20 @@ export default function EquipmentDetailModal({
                       )}
                     </div>
                   )}
+                </div>
+
+                {/* Fecha de Creación / Ingreso */}
+                <div className="space-y-1 border-t border-gray-200 pt-2">
+                  <div className="flex items-center justify-between text-gray-500 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Fecha de Creación / Registro:</span>
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded-xl border border-gray-200 text-gray-900 font-bold text-xs flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-gray-500" />
+                    <span>{formatCreationDate(item.createdAt)}</span>
+                  </div>
                 </div>
 
                 {/* Propietario / Cliente / Colaborador Info Card */}
