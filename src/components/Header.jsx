@@ -20,12 +20,12 @@ export default function Header({
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const allTabs = [
-    { id: 'reparaciones', label: 'Reparaciones', icon: LayoutGrid },
-    { id: 'equipos', label: 'Equipos / Personal', icon: Users, roles: ['super_admin', 'admin'] },
-    { id: 'logs', label: 'Historial / Auditoría', icon: Activity, roles: ['super_admin', 'admin'] },
-    { id: 'herramientas', label: 'Herramientas', icon: Wrench, badge: 'Próximamente' },
-    { id: 'alquileres', label: 'Alquileres', icon: PlusCircle, badge: 'Próximamente' },
-    { id: 'horarios', label: 'Horarios', icon: Clock, badge: 'Próximamente' },
+    { id: 'reparaciones', label: 'Reparaciones', shortLabel: 'Reparaciones', icon: LayoutGrid },
+    { id: 'equipos', label: 'Equipos / Personal', shortLabel: 'Personal', icon: Users, roles: ['super_admin', 'admin'] },
+    { id: 'logs', label: 'Historial / Auditoría', shortLabel: 'Auditoría', icon: Activity, roles: ['super_admin', 'admin'] },
+    { id: 'herramientas', label: 'Herramientas', shortLabel: 'Herramientas', icon: Wrench, badge: 'Próximamente' },
+    { id: 'alquileres', label: 'Alquileres', shortLabel: 'Alquileres', icon: PlusCircle, badge: 'Próximamente' },
+    { id: 'horarios', label: 'Horarios', shortLabel: 'Horarios', icon: Clock, badge: 'Próximamente' },
   ];
 
   const tabs = allTabs.filter(tab => !tab.roles || tab.roles.includes(currentRole));
@@ -219,12 +219,12 @@ export default function Header({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all ${
                 isActive ? 'text-black font-bold scale-105' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
               <Icon className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span className="text-[10px] font-medium truncate max-w-[64px]">{tab.shortLabel || tab.label}</span>
             </button>
           );
         })}

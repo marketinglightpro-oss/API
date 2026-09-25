@@ -778,7 +778,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen py-4 sm:py-6 transition-colors font-poppins selection:bg-black selection:text-white">
+    <div className="min-h-screen pt-4 pb-24 md:py-6 transition-colors font-poppins selection:bg-black selection:text-white">
       
       {/* Top Header & Role Indicator */}
       <Header
