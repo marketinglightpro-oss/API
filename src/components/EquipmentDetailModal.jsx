@@ -232,14 +232,16 @@ export default function EquipmentDetailModal({
         </button>
 
         {/* Jira-Style Top Navigation & Header Bar */}
-        <div className="px-4 sm:px-8 py-4 border-b border-gray-200 bg-white flex items-center justify-between gap-3 flex-shrink-0 flex-wrap sm:flex-nowrap">
+        <div className="px-3 sm:px-8 py-3 sm:py-4 border-b border-gray-200 bg-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
           
           {/* Left Breadcrumb & Asset Key */}
-          <div className="flex items-center gap-2 text-xs flex-wrap">
-            <span className="font-mono font-extrabold bg-black text-white px-3 py-1 rounded-xl text-xs shadow-md">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs flex-wrap">
+            <span className="font-mono font-extrabold bg-black text-white px-2.5 py-1 rounded-xl text-xs shadow-md">
               {item.id}
             </span>
-            <span className="text-gray-300 font-bold">/</span>
+            
+            <span className="text-gray-300 font-bold">•</span>
+
             {isEditing ? (
               <div className="flex items-center gap-1">
                 <span className="text-[10px] font-bold text-gray-400">S/N:</span>
@@ -247,17 +249,19 @@ export default function EquipmentDetailModal({
                   type="text"
                   value={editSerialNumber}
                   onChange={(e) => setEditSerialNumber(e.target.value)}
-                  className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 font-mono text-xs font-bold text-gray-900 focus:ring-2 focus:ring-black"
+                  className="bg-white border border-gray-300 rounded-lg px-2 py-0.5 font-mono text-xs font-bold text-gray-900 focus:ring-2 focus:ring-black max-w-[140px]"
                   placeholder="Número de Serie"
                   required
                 />
               </div>
             ) : (
-              <span className="font-mono text-gray-700 bg-white px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200 shadow-xs">
+              <span className="font-mono text-gray-700 bg-white px-2.5 py-0.5 rounded-lg font-semibold text-[11px] border border-gray-200 shadow-xs truncate max-w-[170px] sm:max-w-none">
                 S/N: {item.serialNumber}
               </span>
             )}
-            <span className="text-gray-300 font-bold">/</span>
+
+            <span className="text-gray-300 font-bold">•</span>
+
             {isEditing ? (
               <select
                 value={editCategory}
@@ -273,30 +277,31 @@ export default function EquipmentDetailModal({
                 <option value="General">General</option>
               </select>
             ) : (
-              <span className="hidden sm:inline-block font-semibold text-gray-700 bg-white px-3 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
+              <span className="font-semibold text-gray-700 bg-white px-2.5 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
                 {item.category}
               </span>
             )}
+
             {item.createdAt && (
               <>
-                <span className="text-gray-300 font-bold hidden md:inline">/</span>
-                <span className="hidden md:inline-flex items-center gap-1 font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
+                <span className="text-gray-300 font-bold">•</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full text-[11px] border border-gray-200 shadow-xs">
                   <Clock className="w-3 h-3 text-gray-500" />
-                  Creado: {formatCreationDate(item.createdAt)}
+                  <span className="truncate max-w-[170px] sm:max-w-none">Creado: {formatCreationDate(item.createdAt)}</span>
                 </span>
               </>
             )}
           </div>
 
           {/* Right Action Bar: Status Select & Action Buttons */}
-          <div className="flex items-center gap-2 ml-auto sm:ml-0">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-100">
             
             {/* Quick Status Select Button */}
             {(currentRole === 'super_admin' || currentRole === 'admin' || currentRole === 'technician') ? (
               <select
                 value={item.status}
                 onChange={(e) => onUpdateStatus(item.id, e.target.value)}
-                className="bg-black text-white font-extrabold text-xs px-3.5 py-2 rounded-2xl shadow-md border border-gray-800 cursor-pointer focus:outline-none hover:bg-gray-900 transition-all"
+                className="flex-1 sm:flex-none bg-black text-white font-extrabold text-xs px-3 py-2 rounded-2xl shadow-md border border-gray-800 cursor-pointer focus:outline-none hover:bg-gray-900 transition-all truncate min-w-0 max-w-full"
               >
                 {KANBAN_STAGES.map((s) => (
                   <option key={s.id} value={s.id}>Etapa: {s.step}. {s.title}</option>
@@ -308,73 +313,75 @@ export default function EquipmentDetailModal({
               </span>
             )}
 
-            <button
-              onClick={() => onOpenQRModal(item)}
-              className="p-2.5 rounded-2xl bg-white hover:bg-black hover:text-white text-gray-900 transition-all shadow-sm border border-gray-200"
-              title="Ver / Imprimir Etiqueta QR"
-            >
-              <QrCode className="w-4 h-4" />
-            </button>
-
-            {(currentRole === 'super_admin' || currentRole === 'admin') && (
-              isEditing ? (
-                <>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md flex items-center gap-1.5 text-xs font-bold animate-pulse"
-                    title="Guardar Cambios de la Ficha"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Guardar Ficha</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditName(item.name || '');
-                      setEditCategory(item.category || 'Audio');
-                      setEditSerialNumber(item.serialNumber || '');
-                      setEditIssue(item.issue || '');
-                      setEditPriority(item.priority || 'Media');
-                      setEditOwnerName(item.ownerName || '');
-                      setEditOwnerPhone(item.ownerPhone || '');
-                      setEditOwnerEmail(item.ownerEmail || '');
-                    }}
-                    className="p-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all shadow-xs text-xs font-bold"
-                    title="Cancelar Edición"
-                  >
-                    <span>Cancelar</span>
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-2.5 rounded-2xl bg-black hover:bg-gray-800 text-white transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold"
-                  title="Editar Ficha de Equipo (Exclusivo Admin / Super Admin)"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Editar Ficha</span>
-                </button>
-              )
-            )}
-
-            {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && !isEditing && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
-                onClick={() => onDeleteEquipment(item.id)}
-                className="p-2.5 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white text-red-600 transition-all shadow-sm border border-red-200 flex items-center gap-1.5 text-xs font-bold"
-                title="Eliminar Ficha de Equipo (Exclusivo Admin / Super Admin)"
+                onClick={() => onOpenQRModal(item)}
+                className="p-2 sm:p-2.5 rounded-2xl bg-white hover:bg-black hover:text-white text-gray-900 transition-all shadow-sm border border-gray-200"
+                title="Ver / Imprimir Etiqueta QR"
               >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Eliminar Ficha</span>
+                <QrCode className="w-4 h-4" />
               </button>
-            )}
 
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white hover:bg-black hover:text-white flex items-center justify-center text-gray-600 transition-all shadow-sm border border-gray-200"
-              title="Cerrar Ficha"
-            >
-              <X className="w-4 h-4" />
-            </button>
+              {(currentRole === 'super_admin' || currentRole === 'admin') && (
+                isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="p-2 sm:p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md flex items-center gap-1 text-xs font-bold animate-pulse"
+                      title="Guardar Cambios de la Ficha"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Guardar</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditName(item.name || '');
+                        setEditCategory(item.category || 'Audio');
+                        setEditSerialNumber(item.serialNumber || '');
+                        setEditIssue(item.issue || '');
+                        setEditPriority(item.priority || 'Media');
+                        setEditOwnerName(item.ownerName || '');
+                        setEditOwnerPhone(item.ownerPhone || '');
+                        setEditOwnerEmail(item.ownerEmail || '');
+                      }}
+                      className="p-2 sm:p-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all shadow-xs text-xs font-bold"
+                      title="Cancelar Edición"
+                    >
+                      <span>Cancelar</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-2 sm:p-2.5 rounded-2xl bg-black hover:bg-gray-800 text-white transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold"
+                    title="Editar Ficha de Equipo"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Editar</span>
+                  </button>
+                )
+              )}
+
+              {(currentRole === 'super_admin' || currentRole === 'admin') && onDeleteEquipment && !isEditing && (
+                <button
+                  onClick={() => onDeleteEquipment(item.id)}
+                  className="p-2 sm:p-2.5 rounded-2xl bg-red-50 hover:bg-red-600 hover:text-white text-red-600 transition-all shadow-sm border border-red-200 flex items-center gap-1.5 text-xs font-bold"
+                  title="Eliminar Ficha de Equipo"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Eliminar</span>
+                </button>
+              )}
+
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-700 transition-all shadow-xs border border-gray-200"
+                title="Cerrar Ficha"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
