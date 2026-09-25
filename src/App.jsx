@@ -708,25 +708,18 @@ export default function App() {
 
   // Handle Technical Note Addition
   const handleAddNote = async (itemId, note) => {
-    let updatedNotes = [];
+    const targetItem = equipmentList.find((i) => i.id === itemId);
+    const existingNotes = targetItem?.notes || (selectedItem?.id === itemId ? selectedItem.notes : []) || [];
+    const updatedNotes = [note, ...existingNotes];
 
     setEquipmentList((prev) =>
-      prev.map((item) => {
-        if (item.id === itemId) {
-          updatedNotes = [note, ...(item.notes || [])];
-          return {
-            ...item,
-            notes: updatedNotes,
-          };
-        }
-        return item;
-      })
+      prev.map((item) => (item.id === itemId ? { ...item, notes: updatedNotes } : item))
     );
 
     if (selectedItem && selectedItem.id === itemId) {
       setSelectedItem((prev) => ({
         ...prev,
-        notes: [note, ...(prev.notes || [])],
+        notes: updatedNotes,
       }));
     }
 
@@ -737,6 +730,7 @@ export default function App() {
       role: note.role,
       action: 'Nota de Mantenimiento',
       detail: `Nota añadida a ${itemId}: "${note.text || 'Evidencia adjunta'}"`,
+      equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
 
@@ -755,7 +749,21 @@ export default function App() {
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
-        await supabase.from('equipment').update({ notes: updatedNotes }).eq('id', itemId);
+        console.log(`[Supabase Notes] Guardando ${updatedNotes.length} notas en equipo ${itemId}...`);
+        const { error: noteErr } = await supabase.from('equipment').update({ notes: updatedNotes }).eq('id', itemId);
+
+        if (noteErr) {
+          console.error('Error al actualizar notas en Supabase:', noteErr);
+          // Fallback if heavy base64 photos caused payload size error
+          const sanitizedNotes = updatedNotes.map(n => ({
+            ...n,
+            photos: (n.photos || []).map(p => p.length > 50000 ? '[Foto]' : p)
+          }));
+          await supabase.from('equipment').update({ notes: sanitizedNotes }).eq('id', itemId);
+        } else {
+          console.log(`[Supabase Notes] Guardado exitoso en equipo ${itemId}`);
+        }
+
         await supabase.from('activity_logs').insert([{
           id: newLog.id,
           timestamp: newLog.timestamp,
@@ -763,9 +771,10 @@ export default function App() {
           role: newLog.role,
           action: newLog.action,
           detail: newLog.detail,
+          equipment_id: itemId,
         }]);
       } catch (err) {
-        console.error('Error updating note in Supabase:', err);
+        console.error('Error enviando nota a Supabase:', err);
       }
     }
   };
@@ -788,6 +797,19 @@ export default function App() {
     
     return matchesCategory && matchesSearch;
   });
+
+  const handleSelectEquipmentById = (equipmentId) => {
+    if (!equipmentId) return;
+    const target = equipmentList.find(
+      (e) => e.id.toLowerCase() === equipmentId.toLowerCase()
+    );
+    if (target) {
+      setActiveTab('reparaciones');
+      setSelectedItem(target);
+    } else {
+      alert(`Ficha de equipo (${equipmentId}) no encontrada.`);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-4 pb-24 md:py-6 transition-colors font-poppins selection:bg-black selection:text-white">
@@ -814,8 +836,7 @@ export default function App() {
         }}
         onSelectNotification={(notif) => {
           if (notif.equipmentId) {
-            const eq = equipmentList.find((e) => e.id === notif.equipmentId);
-            if (eq) setSelectedItem(eq);
+            handleSelectEquipmentById(notif.equipmentId);
           }
         }}
         isSyncing={isSyncing}
@@ -880,7 +901,10 @@ export default function App() {
       )}
 
       {activeTab === 'logs' && (
-        <ActivityLogView logs={logs} />
+        <ActivityLogView
+          logs={logs}
+          onSelectEquipment={handleSelectEquipmentById}
+        />
       )}
 
       {(activeTab === 'herramientas' || activeTab === 'alquileres' || activeTab === 'horarios') && (
