@@ -206,9 +206,17 @@ export default function KanbanBoard({
                       )}
 
                       {/* Issue Preview */}
-                      <p className="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-3 italic">
+                      <p className="text-[11px] text-gray-500 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-2 italic">
                         "{item.issue}"
                       </p>
+
+                      {/* Registered By Creator Badge (Esquina inferior) */}
+                      <div className="flex items-center justify-between text-[10px] text-gray-500 mb-2 pt-1 border-t border-gray-100/60">
+                        <span className="inline-flex items-center gap-1 font-semibold text-gray-700 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200/80" title="Usuario que registró este equipo en el sistema">
+                          <User className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                          <span>Creado por: <strong className="text-gray-900">{item.createdBy || item.ownerName}</strong></span>
+                        </span>
+                      </div>
 
                       {/* Action Bar */}
                       <div className="flex items-center justify-between pt-2 border-t border-gray-100">

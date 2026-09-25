@@ -134,6 +134,7 @@ export default function App() {
           technicianAssigned: item.technician_assigned,
           promisedDate: item.promised_date,
           createdAt: item.created_at,
+          createdBy: item.created_by || item.created_user || item.history?.[0]?.updatedBy || item.owner_name || 'Sistema',
           photoUrl: item.photo_url,
           photos: item.photos || (item.photo_url ? [item.photo_url] : []),
           notes: item.notes || [],
@@ -172,7 +173,7 @@ export default function App() {
 
     fetchSupabaseData();
 
-    // Subscribe to Realtime WebSockets for instant multi-user synchronization
+    // Subscribe to Realtime WebSockets for instant multi-user synchronization across tables
     const channel = supabase
       .channel('public:realtime_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => {
@@ -181,6 +182,10 @@ export default function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
         console.log('[Realtime] Cambio detectado en perfiles. Sincronizando perfiles...');
+        fetchSupabaseData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_logs' }, () => {
+        console.log('[Realtime] Nuevo log de actividad detectado. Actualizando auditoría...');
         fetchSupabaseData();
       })
       .subscribe();
@@ -479,7 +484,12 @@ export default function App() {
       ? (currentUser.user_metadata?.full_name || currentUser.email)
       : newRecord.ownerName;
 
-    setEquipmentList((prev) => [newRecord, ...prev]);
+    const enrichedRecord = {
+      ...newRecord,
+      createdBy: authorName,
+    };
+
+    setEquipmentList((prev) => [enrichedRecord, ...prev]);
 
     const newLog = {
       id: `LOG-${Date.now()}`,
@@ -487,12 +497,12 @@ export default function App() {
       user: authorName,
       role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
       action: 'Equipo Registrado',
-      detail: `Nuevo equipo registrado: ${newRecord.name} (${newRecord.id}) - Serie: ${newRecord.serialNumber}`,
+      detail: `Nuevo equipo registrado por ${authorName}: ${newRecord.name} (${newRecord.id}) - Serie: ${newRecord.serialNumber}`,
     };
     setLogs((prev) => [newLog, ...prev]);
 
     setShowRegisterModal(false);
-    setQrModalItem(newRecord);
+    setQrModalItem(enrichedRecord);
 
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
@@ -510,6 +520,7 @@ export default function App() {
           status: newRecord.status,
           technician_assigned: newRecord.technicianAssigned || null,
           created_at: newRecord.createdAt,
+          created_by: authorName,
           photo_url: newRecord.photoUrl || null,
           photos: newRecord.photos || [],
           notes: newRecord.notes || [],

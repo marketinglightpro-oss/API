@@ -180,6 +180,7 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
   };
 
   const handleUpdateRole = async (userId, newRole) => {
+    const targetUser = users.find(u => u.id === userId);
     const updated = users.map(u => u.id === userId ? { ...u, role: newRole } : u);
     setUsers(updated);
     if (onUpdateTeamMembers) onUpdateTeamMembers(updated);
@@ -187,6 +188,15 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+        const adminName = currentUser?.user_metadata?.full_name || currentUser?.email || 'Administrador';
+        await supabase.from('activity_logs').insert([{
+          id: `LOG-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          user_name: adminName,
+          role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
+          action: 'Cambio de Rol',
+          detail: `Rol de ${targetUser?.full_name || targetUser?.email || userId} actualizado a "${newRole}" por ${adminName}`
+        }]);
       } catch (e) {
         console.error('Error actualizando rol en Supabase:', e);
       }
@@ -194,7 +204,8 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('¿Estás seguro de eliminar este usuario del equipo?')) return;
+    const targetUser = users.find(u => u.id === userId);
+    if (!confirm(`¿Estás seguro de eliminar el usuario "${targetUser?.full_name || userId}" del equipo?`)) return;
     const updated = users.filter((u) => u.id !== userId);
     setUsers(updated);
     if (onUpdateTeamMembers) onUpdateTeamMembers(updated);
@@ -202,6 +213,15 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.from('profiles').delete().eq('id', userId);
+        const adminName = currentUser?.user_metadata?.full_name || currentUser?.email || 'Administrador';
+        await supabase.from('activity_logs').insert([{
+          id: `LOG-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          user_name: adminName,
+          role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
+          action: 'Usuario Eliminado',
+          detail: `Usuario ${targetUser?.full_name || targetUser?.email || userId} fue eliminado por ${adminName}`
+        }]);
       } catch (e) {
         console.error('Error eliminando usuario de Supabase:', e);
       }

@@ -22,6 +22,7 @@ export default function Header({
   const allTabs = [
     { id: 'reparaciones', label: 'Reparaciones', icon: LayoutGrid },
     { id: 'equipos', label: 'Equipos / Personal', icon: Users, roles: ['super_admin', 'admin'] },
+    { id: 'logs', label: 'Historial / Auditoría', icon: Activity, roles: ['super_admin', 'admin'] },
     { id: 'herramientas', label: 'Herramientas', icon: Wrench, badge: 'Próximamente' },
     { id: 'alquileres', label: 'Alquileres', icon: PlusCircle, badge: 'Próximamente' },
     { id: 'horarios', label: 'Horarios', icon: Clock, badge: 'Próximamente' },
