@@ -114,61 +114,81 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync with Supabase Database Tables on Mount
-  useEffect(() => {
-    const fetchSupabaseData = async () => {
-      if (!isSupabaseConfigured || !supabase) return;
-      try {
-        const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
-        if (!eqErr && eqData) {
-          const mapped = eqData.map(item => ({
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            serialNumber: item.serial_number,
-            ownerName: item.owner_name,
-            ownerPhone: item.owner_phone,
-            ownerEmail: item.owner_email,
-            issue: item.issue,
-            priority: item.priority,
-            status: item.status,
-            technicianAssigned: item.technician_assigned,
-            promisedDate: item.promised_date,
-            createdAt: item.created_at,
-            photoUrl: item.photo_url,
-            photos: item.photos || (item.photo_url ? [item.photo_url] : []),
-            notes: item.notes || [],
-            history: item.history || [],
-          }));
-          
-          setEquipmentList(mapped);
-          localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
-        }
-
-        const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
-        if (!logErr && logData && logData.length > 0) {
-          const mappedLogs = logData.map(l => ({
-            id: l.id,
-            timestamp: l.timestamp,
-            user: l.user_name,
-            role: l.role,
-            action: l.action,
-            detail: l.detail,
-          }));
-          setLogs(mappedLogs);
-        }
-
-        const { data: profileData, error: profErr } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-        if (!profErr && profileData && profileData.length > 0) {
-          setTeamMembers(profileData);
-        }
-      } catch (err) {
-        console.warn('Supabase fetch error, using local state:', err);
+  // Fetch data from Supabase Database
+  const fetchSupabaseData = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
+      if (!eqErr && eqData) {
+        const mapped = eqData.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          serialNumber: item.serial_number,
+          ownerName: item.owner_name,
+          ownerPhone: item.owner_phone,
+          ownerEmail: item.owner_email,
+          issue: item.issue,
+          priority: item.priority,
+          status: item.status,
+          technicianAssigned: item.technician_assigned,
+          promisedDate: item.promised_date,
+          createdAt: item.created_at,
+          photoUrl: item.photo_url,
+          photos: item.photos || (item.photo_url ? [item.photo_url] : []),
+          notes: item.notes || [],
+          history: item.history || [],
+        }));
+        
+        setEquipmentList(mapped);
+        localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
       }
-    };
+
+      const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
+      if (!logErr && logData && logData.length > 0) {
+        const mappedLogs = logData.map(l => ({
+          id: l.id,
+          timestamp: l.timestamp,
+          user: l.user_name,
+          role: l.role,
+          action: l.action,
+          detail: l.detail,
+        }));
+        setLogs(mappedLogs);
+      }
+
+      const { data: profileData, error: profErr } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (!profErr && profileData && profileData.length > 0) {
+        setTeamMembers(profileData);
+      }
+    } catch (err) {
+      console.warn('Supabase fetch error, using local state:', err);
+    }
+  }, []);
+
+  // Sync with Supabase Database Tables on Mount & Subscribe to Realtime WebSockets
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
 
     fetchSupabaseData();
-  }, []);
+
+    // Subscribe to Realtime WebSockets for instant multi-user synchronization
+    const channel = supabase
+      .channel('public:realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => {
+        console.log('[Realtime] Cambio detectado en equipos. Sincronizando cuentas...');
+        fetchSupabaseData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        console.log('[Realtime] Cambio detectado en perfiles. Sincronizando perfiles...');
+        fetchSupabaseData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSupabaseData]);
 
   // Automatic Background Sync to Supabase (Pulls cloud updates & syncs offline pending items)
   const syncLocalToSupabase = useCallback(async () => {
@@ -207,40 +227,14 @@ export default function App() {
         }
       }
 
-      // 2. Fetch latest equipment list from Supabase (Cloud is the single source of truth)
-      const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
-      if (!eqErr && eqData) {
-        const mapped = eqData.map(item => ({
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          serialNumber: item.serial_number,
-          ownerName: item.owner_name,
-          ownerPhone: item.owner_phone,
-          ownerEmail: item.owner_email,
-          issue: item.issue,
-          priority: item.priority,
-          status: item.status,
-          technicianAssigned: item.technician_assigned,
-          promisedDate: item.promised_date,
-          createdAt: item.created_at,
-          photoUrl: item.photo_url,
-          photos: item.photos || (item.photo_url ? [item.photo_url] : []),
-          notes: item.notes || [],
-          history: item.history || [],
-        }));
-
-        setEquipmentList(mapped);
-        localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
-      }
-
+      await fetchSupabaseData();
       setLastSyncTime(new Date().toLocaleTimeString());
     } catch (err) {
       console.warn('Error en sincronización automática:', err);
     } finally {
       setIsSyncing(false);
     }
-  }, [equipmentList]);
+  }, [equipmentList, fetchSupabaseData]);
 
   // Execute background sync interval every 10 seconds
   useEffect(() => {
