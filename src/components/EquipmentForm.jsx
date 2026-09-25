@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { CATEGORIES } from '../mockData';
-import { PlusCircle, QrCode, X, ShieldAlert, Camera, Upload, Trash2 } from 'lucide-react';
+import { CATEGORIES, INSPECTION_ITEMS, ASSET_STATUSES, DEFAULT_INSPECTION_CHECKLIST } from '../mockData';
+import { PlusCircle, QrCode, X, ShieldAlert, Camera, Upload, Trash2, CheckCircle2, AlertTriangle, XCircle, Tag, CheckSquare, Wrench } from 'lucide-react';
 
 export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) {
   const [formData, setFormData] = useState({
     name: '',
+    brand: '',
     category: 'Audio',
     serialNumber: '',
     ownerName: '',
@@ -12,6 +13,8 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     ownerEmail: '',
     issue: '',
     priority: 'Media',
+    assetStatus: 'En reparación',
+    inspectionChecklist: { ...DEFAULT_INSPECTION_CHECKLIST },
     technicianAssigned: currentRole === 'technician' ? 'Técnico Usuario' : 'Carlos Mendoza',
     photoUrl: '',
     photos: [],
@@ -22,6 +25,16 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleChecklistChange = (itemKey, statusValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      inspectionChecklist: {
+        ...prev.inspectionChecklist,
+        [itemKey]: statusValue,
+      },
+    }));
   };
 
   const compressImage = (file) => {
@@ -94,13 +107,14 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.serialNumber || !formData.ownerName || !formData.issue) {
-      setError('Por favor completa todos los campos obligatorios.');
+      setError('Por favor completa todos los campos obligatorios (Nombre, Serie, Propietario y Motivo/Falla).');
       return;
     }
 
     const newId = `EQ-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord = {
       ...formData,
+      brand: formData.brand.trim() || 'Genérica',
       id: newId,
       status: 'received',
       createdAt: new Date().toISOString(),
@@ -121,7 +135,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-      <div className="liquid-card bg-white rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-8 border-t sm:border border-white/80 shadow-2xl overflow-y-auto max-h-[92vh]">
+      <div className="liquid-card bg-white rounded-t-3xl sm:rounded-3xl max-w-3xl w-full p-4 sm:p-8 border-t sm:border border-white/80 shadow-2xl overflow-y-auto max-h-[92vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-200/80">
@@ -130,8 +144,8 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
               <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">Registrar Nuevo Equipo</h2>
-              <p className="text-[10px] sm:text-xs text-gray-500">Crear ficha de activo e imprimir QR</p>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">Registrar Nuevo Equipo / Ficha de Activo</h2>
+              <p className="text-[10px] sm:text-xs text-gray-500">Ingreso con inspección de 10 puntos, marca e impresión de QR</p>
             </div>
           </div>
           <button
@@ -149,20 +163,32 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           
-          {/* Equipment Name & Category */}
+          {/* Equipment Name, Brand & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-gray-700 font-semibold mb-1">Nombre / Modelo del Equipo *</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Ej. Meyer Sound LEOPARD"
+                placeholder="Ej. Sharpy 300 Beam"
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 sm:py-2.5 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black transition-all"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-1">Marca del Equipo</label>
+              <input
+                type="text"
+                name="brand"
+                value={formData.brand}
+                onChange={handleChange}
+                placeholder="Ej. Clay Paky, Chauvet, Robe, Martin"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 sm:py-2.5 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black transition-all"
               />
             </div>
 
@@ -181,8 +207,8 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
             </div>
           </div>
 
-          {/* Serial Number & Priority */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {/* Serial Number, Priority & Asset Availability Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label className="block text-gray-700 font-semibold mb-1">Número de Serie / ID Activo *</label>
               <input
@@ -208,6 +234,84 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
                 <option value="Media">Media (Reparación Estándar)</option>
                 <option value="Urgente">Urgente (Crítico para Evento)</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-1">Estado Actual del Equipo *</label>
+              <select
+                name="assetStatus"
+                value={formData.assetStatus}
+                onChange={handleChange}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 sm:py-2.5 text-gray-900 font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-black transition-all"
+              >
+                {ASSET_STATUSES.map((st) => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 10-Point Physical Inspection Checklist */}
+          <div className="p-4 rounded-2xl bg-gray-50/90 border border-gray-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-gray-900 font-extrabold text-xs flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-black" />
+                <span>Estado de Inspección Inicial por Componente (10 Puntos)</span>
+              </label>
+              <span className="text-[10px] text-gray-500 font-semibold bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                Selecciona: Bueno, Regular o Malo
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {INSPECTION_ITEMS.map((itemKey) => {
+                const currentVal = formData.inspectionChecklist[itemKey] || 'Bueno';
+                return (
+                  <div key={itemKey} className="bg-white p-2.5 rounded-xl border border-gray-200/80 flex items-center justify-between gap-2 shadow-xs">
+                    <span className="font-bold text-gray-800 text-[11px] truncate">{itemKey}</span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleChecklistChange(itemKey, 'Bueno')}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-0.5 border ${
+                          currentVal === 'Bueno'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Bueno</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleChecklistChange(itemKey, 'Regular')}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-0.5 border ${
+                          currentVal === 'Regular'
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>Regular</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleChecklistChange(itemKey, 'Malo')}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-0.5 border ${
+                          currentVal === 'Malo'
+                            ? 'bg-red-600 text-white border-red-600 shadow-xs'
+                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        <XCircle className="w-3 h-3" />
+                        <span>Malo</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -354,3 +458,4 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     </div>
   );
 }
+

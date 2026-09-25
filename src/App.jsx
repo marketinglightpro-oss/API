@@ -9,7 +9,7 @@ import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
 import UserManagementView from './components/UserManagementView';
 import LoginScreen from './components/LoginScreen';
-import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES } from './mockData';
+import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES, DEFAULT_INSPECTION_CHECKLIST } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
@@ -123,6 +123,7 @@ export default function App() {
         const mapped = eqData.map(item => ({
           id: item.id,
           name: item.name,
+          brand: item.brand || 'Genérica',
           category: item.category,
           serialNumber: item.serial_number,
           ownerName: item.owner_name,
@@ -131,6 +132,8 @@ export default function App() {
           issue: item.issue,
           priority: item.priority,
           status: item.status,
+          assetStatus: item.asset_status || item.assetStatus || 'En reparación',
+          inspectionChecklist: item.inspection_checklist || item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST,
           technicianAssigned: item.technician_assigned,
           promisedDate: item.promised_date,
           createdAt: item.created_at,
@@ -209,6 +212,7 @@ export default function App() {
           const fullPayload = {
             id: item.id,
             name: item.name,
+            brand: item.brand || 'Genérica',
             category: item.category,
             serial_number: item.serialNumber,
             owner_name: item.ownerName,
@@ -217,6 +221,8 @@ export default function App() {
             issue: item.issue,
             priority: item.priority,
             status: item.status,
+            asset_status: item.assetStatus || 'En reparación',
+            inspection_checklist: item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST,
             technician_assigned: item.technicianAssigned || null,
             promised_date: item.promisedDate || null,
             created_at: item.createdAt,
@@ -510,6 +516,7 @@ export default function App() {
         const fullPayload = {
           id: newRecord.id,
           name: newRecord.name,
+          brand: newRecord.brand || 'Genérica',
           category: newRecord.category,
           serial_number: newRecord.serialNumber,
           owner_name: newRecord.ownerName,
@@ -518,6 +525,8 @@ export default function App() {
           issue: newRecord.issue,
           priority: newRecord.priority,
           status: newRecord.status,
+          asset_status: newRecord.assetStatus || 'En reparación',
+          inspection_checklist: newRecord.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST,
           technician_assigned: newRecord.technicianAssigned || null,
           created_at: newRecord.createdAt,
           created_by: authorName,
@@ -666,6 +675,7 @@ export default function App() {
       try {
         const dbPayload = {
           name: updatedFields.name,
+          brand: updatedFields.brand,
           category: updatedFields.category,
           serial_number: updatedFields.serialNumber,
           owner_name: updatedFields.ownerName,
@@ -673,6 +683,8 @@ export default function App() {
           owner_email: updatedFields.ownerEmail || null,
           issue: updatedFields.issue,
           priority: updatedFields.priority,
+          asset_status: updatedFields.assetStatus,
+          inspection_checklist: updatedFields.inspectionChecklist,
         };
 
         const { error: updErr } = await supabase.from('equipment').update(dbPayload).eq('id', itemId);

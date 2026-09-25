@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { KANBAN_STAGES } from '../mockData';
-import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck, Clock, MessageSquare, History, Tag, AlertTriangle, ChevronRight, Shield, Edit3, Save, Check } from 'lucide-react';
+import { KANBAN_STAGES, INSPECTION_ITEMS, ASSET_STATUSES, DEFAULT_INSPECTION_CHECKLIST } from '../mockData';
+import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck, Clock, MessageSquare, History, Tag, AlertTriangle, ChevronRight, Shield, Edit3, Save, Check, CheckSquare, XCircle, ShieldAlert } from 'lucide-react';
 
 export default function EquipmentDetailModal({
   item,
@@ -25,10 +25,13 @@ export default function EquipmentDetailModal({
   // Edit Mode States
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name || '');
+  const [editBrand, setEditBrand] = useState(item.brand || '');
   const [editCategory, setEditCategory] = useState(item.category || 'Audio');
   const [editSerialNumber, setEditSerialNumber] = useState(item.serialNumber || '');
   const [editIssue, setEditIssue] = useState(item.issue || '');
   const [editPriority, setEditPriority] = useState(item.priority || 'Media');
+  const [editAssetStatus, setEditAssetStatus] = useState(item.assetStatus || 'En reparación');
+  const [editChecklist, setEditChecklist] = useState(item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST);
   const [editOwnerName, setEditOwnerName] = useState(item.ownerName || '');
   const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
   const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
@@ -42,10 +45,13 @@ export default function EquipmentDetailModal({
     if (onUpdateEquipment) {
       onUpdateEquipment(item.id, {
         name: editName.trim(),
+        brand: editBrand.trim() || 'Genérica',
         category: editCategory,
         serialNumber: editSerialNumber.trim(),
         issue: editIssue.trim(),
         priority: editPriority,
+        assetStatus: editAssetStatus,
+        inspectionChecklist: editChecklist,
         ownerName: editOwnerName.trim(),
         ownerPhone: editOwnerPhone.trim(),
         ownerEmail: editOwnerEmail.trim(),
@@ -53,6 +59,13 @@ export default function EquipmentDetailModal({
     }
 
     setIsEditing(false);
+  };
+
+  const handleEditChecklistChange = (itemKey, statusValue) => {
+    setEditChecklist((prev) => ({
+      ...prev,
+      [itemKey]: statusValue,
+    }));
   };
 
   const formatCreationDate = (dateStr) => {
@@ -344,26 +357,50 @@ export default function EquipmentDetailModal({
           {/* LEFT COLUMN: Title, Description, Damage Photos & Activity Tabs (Jira Ratio ~ 68% -> lg:col-span-8) */}
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Asset Title */}
+            {/* Asset Title & Brand */}
             <div>
               {isEditing ? (
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                    Nombre del Equipo / Marca & Modelo *
-                  </label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-2.5 text-lg sm:text-2xl font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs"
-                    placeholder="Ej. Consola Midas M32"
-                    required
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1">
+                      Nombre del Equipo / Modelo *
+                    </label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-2 text-base font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs"
+                      placeholder="Ej. Consola Midas M32"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1">
+                      Marca del Equipo
+                    </label>
+                    <input
+                      type="text"
+                      value={editBrand}
+                      onChange={(e) => setEditBrand(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-2xl px-4 py-2 text-base font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black shadow-xs"
+                      placeholder="Ej. Clay Paky, Chauvet"
+                    />
+                  </div>
                 </div>
               ) : (
-                <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-snug">
-                  {item.name}
-                </h1>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-black text-white tracking-wider">
+                      {item.brand || 'Genérica'}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                      {item.assetStatus || 'En reparación'}
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-snug">
+                    {item.name}
+                  </h1>
+                </div>
               )}
             </div>
 
@@ -386,6 +423,82 @@ export default function EquipmentDetailModal({
                   {item.issue}
                 </div>
               )}
+            </div>
+
+            {/* 10-Point Physical Component Inspection Section */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4 text-black" />
+                  <span>Inspección de Estado por Componente (10 Puntos)</span>
+                </h3>
+                {isEditing && (
+                  <span className="text-[10px] text-gray-400 font-medium">Haz clic para cambiar el estado</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {INSPECTION_ITEMS.map((itemKey) => {
+                  const checklistObj = isEditing ? editChecklist : (item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST);
+                  const currentVal = checklistObj[itemKey] || 'Bueno';
+
+                  return (
+                    <div key={itemKey} className="bg-gray-50 p-2.5 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-2 shadow-xs">
+                      <span className="font-bold text-gray-800 text-xs truncate">{itemKey}</span>
+                      
+                      {isEditing ? (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleEditChecklistChange(itemKey, 'Bueno')}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
+                              currentVal === 'Bueno' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            Bueno
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditChecklistChange(itemKey, 'Regular')}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
+                              currentVal === 'Regular' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            Regular
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEditChecklistChange(itemKey, 'Malo')}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
+                              currentVal === 'Malo' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            Malo
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex-shrink-0">
+                          {currentVal === 'Bueno' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Bueno
+                            </span>
+                          )}
+                          {currentVal === 'Regular' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Regular
+                            </span>
+                          )}
+                          {currentVal === 'Malo' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                              <XCircle className="w-3 h-3 text-red-600" /> Malo
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Equipment Damage Photos Section */}
@@ -646,6 +759,26 @@ export default function EquipmentDetailModal({
                       <UserCheck className="w-4 h-4 text-gray-500" />
                       <span className="font-bold text-gray-900">{item.technicianAssigned || 'Sin asignar'}</span>
                     </div>
+                  )}
+                </div>
+
+                {/* Estado Actual del Equipo */}
+                <div className="space-y-1 border-t border-gray-200 pt-2">
+                  <span className="text-gray-500 font-semibold block">Estado / Disponibilidad del Equipo:</span>
+                  {isEditing ? (
+                    <select
+                      value={editAssetStatus}
+                      onChange={(e) => setEditAssetStatus(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      {ASSET_STATUSES.map((st) => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="inline-block px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                      {item.assetStatus || 'En reparación'}
+                    </span>
                   )}
                 </div>
 

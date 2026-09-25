@@ -162,13 +162,39 @@ export default function KanbanBoard({
                         {item.name}
                       </h4>
 
-                      {/* Category & Serial */}
-                      <div className="flex items-center gap-2 mb-2 text-[11px] text-gray-500">
+                      {/* Category, Brand & Serial */}
+                      <div className="flex items-center gap-1.5 mb-2 text-[11px] text-gray-500 flex-wrap">
+                        {item.brand && item.brand !== 'Genérica' && (
+                          <span className="bg-black text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                            {item.brand}
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md text-gray-700 font-medium text-[10px]">
                           {getCategoryIcon(item.category)}
                           {item.category}
                         </span>
-                        <span className="truncate font-mono text-[10px] text-gray-400">{item.serialNumber}</span>
+                        <span className="truncate font-mono text-[10px] text-gray-400">S/N: {item.serialNumber}</span>
+                      </div>
+
+                      {/* Asset Availability Status & Inspection Summary Badges */}
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80">
+                          {item.assetStatus || 'En reparación'}
+                        </span>
+                        {item.inspectionChecklist && (
+                          (() => {
+                            const values = Object.values(item.inspectionChecklist);
+                            const badCount = values.filter(v => v === 'Malo').length;
+                            const regularCount = values.filter(v => v === 'Regular').length;
+                            if (badCount > 0) {
+                              return <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-800 border border-red-200 animate-pulse">{badCount} Falla(s)</span>;
+                            }
+                            if (regularCount > 0) {
+                              return <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">{regularCount} Regular</span>;
+                            }
+                            return <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">10/10 OK</span>;
+                          })()
+                        )}
                       </div>
 
                       {/* Owner & Assigned Technician Preview */}

@@ -29,12 +29,18 @@ CREATE TABLE IF NOT EXISTS public.equipment (
   photo_url TEXT,
   photos JSONB DEFAULT '[]'::jsonb,
   notes JSONB DEFAULT '[]'::jsonb,
-  history JSONB DEFAULT '[]'::jsonb
+  history JSONB DEFAULT '[]'::jsonb,
+  brand TEXT DEFAULT 'Genérica',
+  asset_status TEXT DEFAULT 'En reparación',
+  inspection_checklist JSONB DEFAULT '{}'::jsonb
 );
 
--- Ensure photos and promised_date columns exist for existing installations
+-- Ensure optional and new columns exist for existing installations
 ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS promised_date TEXT;
+ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT 'Genérica';
+ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS asset_status TEXT DEFAULT 'En reparación';
+ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS inspection_checklist JSONB DEFAULT '{}'::jsonb;
 
 -- 3. Create Activity Logs Table
 CREATE TABLE IF NOT EXISTS public.activity_logs (

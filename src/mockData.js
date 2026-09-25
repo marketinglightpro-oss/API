@@ -14,6 +14,43 @@ export const CATEGORIES = [
   'Energía',
 ];
 
+export const INSPECTION_ITEMS = [
+  'Carcasa/estructura',
+  'Lentes/óptica',
+  'LED/fuente de luz',
+  'Movimiento/motores',
+  'Ventiladores/Refrigeración',
+  'Display/Controles',
+  'Conectores/puertos de DMX',
+  'Alimentación eléctrica',
+  'Tornilleria/Soportes',
+  'Cable de poder/señal',
+];
+
+export const ASSET_STATUSES = [
+  'Disponible para renta',
+  'Disponible para venta de segunda',
+  'Disponible para renta y venta',
+  'En mantenimiento',
+  'En reparación',
+  'Fuera de servicio',
+  'Pendiente de baja',
+];
+
+export const DEFAULT_INSPECTION_CHECKLIST = {
+  'Carcasa/estructura': 'Bueno',
+  'Lentes/óptica': 'Bueno',
+  'LED/fuente de luz': 'Bueno',
+  'Movimiento/motores': 'Bueno',
+  'Ventiladores/Refrigeración': 'Bueno',
+  'Display/Controles': 'Bueno',
+  'Conectores/puertos de DMX': 'Bueno',
+  'Alimentación eléctrica': 'Bueno',
+  'Tornilleria/Soportes': 'Bueno',
+  'Cable de poder/señal': 'Bueno',
+};
+
 export const INITIAL_EQUIPMENT = [];
 
 export const INITIAL_LOGS = [];
+
