@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { KANBAN_STAGES, INSPECTION_ITEMS, ASSET_STATUSES, DEFAULT_INSPECTION_CHECKLIST } from '../mockData';
+import React, { useState, useRef, useEffect } from 'react';
+import { KANBAN_STAGES, INSPECTION_ITEMS, ASSET_STATUSES, DEFAULT_INSPECTION_CHECKLIST, parseInspectionChecklist } from '../mockData';
 import { X, User, Phone, Mail, Wrench, Plus, QrCode, CheckCircle2, Camera, Image as ImageIcon, Trash2, Eye, Calendar, UserCheck, Clock, MessageSquare, History, Tag, AlertTriangle, ChevronRight, Shield, Edit3, Save, Check, CheckSquare, XCircle, ShieldAlert } from 'lucide-react';
 
 export default function EquipmentDetailModal({
@@ -31,10 +31,27 @@ export default function EquipmentDetailModal({
   const [editIssue, setEditIssue] = useState(item.issue || '');
   const [editPriority, setEditPriority] = useState(item.priority || 'Media');
   const [editAssetStatus, setEditAssetStatus] = useState(item.assetStatus || 'En reparación');
-  const [editChecklist, setEditChecklist] = useState(item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST);
+  const [editChecklist, setEditChecklist] = useState(() => parseInspectionChecklist(item.inspectionChecklist));
   const [editOwnerName, setEditOwnerName] = useState(item.ownerName || '');
   const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
   const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
+
+  // Sync state when item changes or edit mode toggles
+  useEffect(() => {
+    if (item) {
+      setEditName(item.name || '');
+      setEditBrand(item.brand || '');
+      setEditCategory(item.category || 'Audio');
+      setEditSerialNumber(item.serialNumber || '');
+      setEditIssue(item.issue || '');
+      setEditPriority(item.priority || 'Media');
+      setEditAssetStatus(item.assetStatus || 'En reparación');
+      setEditChecklist(parseInspectionChecklist(item.inspectionChecklist));
+      setEditOwnerName(item.ownerName || '');
+      setEditOwnerPhone(item.ownerPhone || '');
+      setEditOwnerEmail(item.ownerEmail || '');
+    }
+  }, [item, isEditing]);
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -473,7 +490,7 @@ export default function EquipmentDetailModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {INSPECTION_ITEMS.map((itemKey) => {
-                  const checklistObj = isEditing ? editChecklist : (item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST);
+                  const checklistObj = isEditing ? parseInspectionChecklist(editChecklist) : parseInspectionChecklist(item.inspectionChecklist);
                   const currentVal = checklistObj[itemKey] || 'Bueno';
 
                   return (

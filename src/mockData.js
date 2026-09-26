@@ -50,7 +50,24 @@ export const DEFAULT_INSPECTION_CHECKLIST = {
   'Cable de poder/señal': 'Bueno',
 };
 
+export const parseInspectionChecklist = (rawChecklist) => {
+  if (!rawChecklist) return { ...DEFAULT_INSPECTION_CHECKLIST };
+  let parsed = rawChecklist;
+  if (typeof rawChecklist === 'string') {
+    try {
+      parsed = JSON.parse(rawChecklist);
+    } catch (e) {
+      return { ...DEFAULT_INSPECTION_CHECKLIST };
+    }
+  }
+  if (typeof parsed === 'object' && parsed !== null) {
+    return { ...DEFAULT_INSPECTION_CHECKLIST, ...parsed };
+  }
+  return { ...DEFAULT_INSPECTION_CHECKLIST };
+};
+
 export const INITIAL_EQUIPMENT = [];
 
 export const INITIAL_LOGS = [];
+
 

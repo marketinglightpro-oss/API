@@ -9,7 +9,7 @@ import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
 import UserManagementView from './components/UserManagementView';
 import LoginScreen from './components/LoginScreen';
-import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES, DEFAULT_INSPECTION_CHECKLIST } from './mockData';
+import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES, DEFAULT_INSPECTION_CHECKLIST, parseInspectionChecklist } from './mockData';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
@@ -19,6 +19,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('lightpro_active_tab') || 'reparaciones';
   }); // 'reparaciones' | 'equipos' | 'herramientas' | 'alquileres' | 'horarios' | 'logs'
+
+  // Persistent Deleted Equipment IDs list (Prevents deleted tickets from restoring during cloud sync)
+  const [deletedEquipmentIds, setDeletedEquipmentIds] = useState(() => {
+    const saved = localStorage.getItem('lightpro_deleted_equipment_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Equipment Data State
   const [equipmentList, setEquipmentList] = useState(() => {
@@ -162,7 +168,20 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     try {
       const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
       if (!eqErr && eqData) {
-        const mapped = eqData.map(item => ({
+        const deletedSet = new Set(JSON.parse(localStorage.getItem('lightpro_deleted_equipment_ids') || '[]'));
+
+        // Filter out deleted items and retry Supabase delete in background if item returned
+        const filteredEq = eqData.filter(item => {
+          if (deletedSet.has(item.id)) {
+            supabase.from('equipment').delete().eq('id', item.id).then(({ error }) => {
+              if (!error) console.log(`[Self-Healing Delete] Re-eliminado equipo ${item.id} de Supabase.`);
+            });
+            return false;
+          }
+          return true;
+        });
+
+        const mapped = filteredEq.map(item => ({
           id: item.id,
           name: item.name,
           brand: item.brand || 'Genérica',
@@ -175,7 +194,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           priority: item.priority,
           status: item.status,
           assetStatus: item.asset_status || item.assetStatus || 'En reparación',
-          inspectionChecklist: item.inspection_checklist || item.inspectionChecklist || DEFAULT_INSPECTION_CHECKLIST,
+          inspectionChecklist: parseInspectionChecklist(item.inspection_checklist || item.inspectionChecklist),
           technicianAssigned: item.technician_assigned,
           promisedDate: item.promised_date,
           createdAt: item.created_at,
@@ -627,6 +646,9 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
       return;
     }
 
+    // Persist deleted ID locally so fetchSupabaseData never restores it
+    setDeletedEquipmentIds((prev) => Array.from(new Set([...prev, itemId])));
+
     const updatedList = equipmentList.filter((i) => i.id !== itemId);
     setEquipmentList(updatedList);
     localStorage.setItem('lightpro_equipment', JSON.stringify(updatedList));
@@ -655,7 +677,6 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         const { error: delErr } = await supabase.from('equipment').delete().eq('id', itemId);
         if (delErr) {
           console.error('Error eliminando equipo de Supabase:', delErr);
-          alert(`Atención: No se pudo eliminar de la base de datos Supabase: ${delErr.message}`);
         } else {
           console.log(`[Supabase Delete] Equipo ${itemId} eliminado exitosamente de la nube.`);
         }
@@ -668,12 +689,17 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
   // Handle Equipment Record Details Update (Exclusive to Super Admin & Admin)
   const handleUpdateEquipment = async (itemId, updatedFields) => {
+    const normalizedFields = {
+      ...updatedFields,
+      inspectionChecklist: parseInspectionChecklist(updatedFields.inspectionChecklist),
+    };
+
     setEquipmentList((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, ...updatedFields } : item))
+      prev.map((item) => (item.id === itemId ? { ...item, ...normalizedFields } : item))
     );
 
     if (selectedItem && selectedItem.id === itemId) {
-      setSelectedItem((prev) => ({ ...prev, ...updatedFields }));
+      setSelectedItem((prev) => ({ ...prev, ...normalizedFields }));
     }
 
     const authorName = currentUser
@@ -686,7 +712,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
       user: authorName,
       role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
       action: 'Ficha Actualizada',
-      detail: `Ficha de equipo ${updatedFields.name || itemId} (${itemId}) fue actualizada por ${authorName}.`,
+      detail: `Ficha de equipo ${normalizedFields.name || itemId} (${itemId}) fue actualizada por ${authorName}.`,
       equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
@@ -694,17 +720,17 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     if (isSupabaseConfigured && supabase) {
       try {
         const dbPayload = {
-          name: updatedFields.name,
-          brand: updatedFields.brand,
-          category: updatedFields.category,
-          serial_number: updatedFields.serialNumber,
-          owner_name: updatedFields.ownerName,
-          owner_phone: updatedFields.ownerPhone || null,
-          owner_email: updatedFields.ownerEmail || null,
-          issue: updatedFields.issue,
-          priority: updatedFields.priority,
-          asset_status: updatedFields.assetStatus,
-          inspection_checklist: updatedFields.inspectionChecklist,
+          name: normalizedFields.name,
+          brand: normalizedFields.brand,
+          category: normalizedFields.category,
+          serial_number: normalizedFields.serialNumber,
+          owner_name: normalizedFields.ownerName,
+          owner_phone: normalizedFields.ownerPhone || null,
+          owner_email: normalizedFields.ownerEmail || null,
+          issue: normalizedFields.issue,
+          priority: normalizedFields.priority,
+          asset_status: normalizedFields.assetStatus,
+          inspection_checklist: normalizedFields.inspectionChecklist,
         };
 
         const { error: updErr } = await supabase.from('equipment').update(dbPayload).eq('id', itemId);
