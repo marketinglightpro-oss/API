@@ -36,7 +36,12 @@ export default function EquipmentDetailModal({
   const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
   const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
 
-  // Sync state when item.id changes
+  const [localChecklist, setLocalChecklist] = useState(() => parseInspectionChecklist(item.inspectionChecklist));
+  const [lastInspectionDate, setLastInspectionDate] = useState(item.lastInspectionDate || item.last_inspection_date || null);
+  const [isSavingInspection, setIsSavingInspection] = useState(false);
+  const [inspectionSuccessMsg, setInspectionSuccessMsg] = useState(false);
+
+  // Sync state when item.id or item inspection properties change
   useEffect(() => {
     if (item) {
       setEditName(item.name || '');
@@ -46,25 +51,68 @@ export default function EquipmentDetailModal({
       setEditIssue(item.issue || '');
       setEditPriority(item.priority || 'Media');
       setEditAssetStatus(item.assetStatus || 'En reparación');
-      setEditChecklist(parseInspectionChecklist(item.inspectionChecklist));
+      const parsedCk = parseInspectionChecklist(item.inspectionChecklist);
+      setEditChecklist(parsedCk);
+      setLocalChecklist(parsedCk);
+      setLastInspectionDate(item.lastInspectionDate || item.last_inspection_date || null);
       setEditOwnerName(item.ownerName || '');
       setEditOwnerPhone(item.ownerPhone || '');
       setEditOwnerEmail(item.ownerEmail || '');
     }
-  }, [item?.id]);
+  }, [item?.id, item?.inspectionChecklist, item?.lastInspectionDate]);
 
-  const handleDirectChecklistChange = (itemKey, newStatus) => {
+  const handleChecklistChangeLocal = (itemKey, newStatus) => {
+    setLocalChecklist((prev) => ({
+      ...prev,
+      [itemKey]: newStatus,
+    }));
     if (isEditing) {
-      handleEditChecklistChange(itemKey, newStatus);
-    } else if (onUpdateEquipment) {
-      const currentObj = parseInspectionChecklist(item.inspectionChecklist);
-      const updatedObj = {
-        ...currentObj,
+      setEditChecklist((prev) => ({
+        ...prev,
         [itemKey]: newStatus,
-      };
-      onUpdateEquipment(item.id, {
-        inspectionChecklist: updatedObj,
+      }));
+    }
+  };
+
+  const handleSaveInspection = async () => {
+    try {
+      setIsSavingInspection(true);
+      const nowIso = new Date().toISOString();
+      setLastInspectionDate(nowIso);
+
+      const targetChecklist = isEditing ? editChecklist : localChecklist;
+      if (onUpdateEquipment) {
+        await onUpdateEquipment(item.id, {
+          inspectionChecklist: targetChecklist,
+          lastInspectionDate: nowIso,
+        });
+      }
+
+      setInspectionSuccessMsg(true);
+      setTimeout(() => {
+        setInspectionSuccessMsg(false);
+      }, 3500);
+    } catch (err) {
+      console.error('Error guardando inspección:', err);
+    } finally {
+      setIsSavingInspection(false);
+    }
+  };
+
+  const formatInspectionDate = (dateStr) => {
+    if (!dateStr) return 'Sin registrar';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
+    } catch (e) {
+      return dateStr;
     }
   };
 
@@ -493,17 +541,48 @@ export default function EquipmentDetailModal({
 
             {/* 10-Point Physical Component Inspection Section */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-gray-200/80">
                 <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
                   <CheckSquare className="w-4 h-4 text-black" />
                   <span>Inspección de Estado por Componente (10 Puntos)</span>
                 </h3>
-                <span className="text-[10px] text-gray-400 font-medium">Haz clic en Bueno, Regular o Malo para cambiar</span>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Last Inspection Date Badge */}
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-xl border border-gray-200 shadow-xs">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Última inspección: {formatInspectionDate(lastInspectionDate)}</span>
+                  </div>
+
+                  {/* Dedicated Save Inspection Button */}
+                  <button
+                    type="button"
+                    onClick={handleSaveInspection}
+                    disabled={isSavingInspection}
+                    className={`px-4 py-1.5 rounded-xl font-extrabold text-xs shadow-md border transition-all flex items-center gap-1.5 ${
+                      isSavingInspection
+                        ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
+                        : 'bg-black text-white hover:bg-gray-800 border-black active:scale-95'
+                    }`}
+                    title="Guardar estado de componentes de la inspección"
+                  >
+                    <Save className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{isSavingInspection ? 'Guardando...' : 'Guardar Inspección'}</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Success Notification Alert */}
+              {inspectionSuccessMsg && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>¡Inspección de 10 puntos guardada y sincronizada correctamente en la nube!</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {INSPECTION_ITEMS.map((itemKey) => {
-                  const checklistObj = isEditing ? parseInspectionChecklist(editChecklist) : parseInspectionChecklist(item.inspectionChecklist);
+                  const checklistObj = isEditing ? parseInspectionChecklist(editChecklist) : parseInspectionChecklist(localChecklist);
                   const currentVal = checklistObj[itemKey] || 'Bueno';
 
                   return (
@@ -513,7 +592,7 @@ export default function EquipmentDetailModal({
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           type="button"
-                          onClick={() => handleDirectChecklistChange(itemKey, 'Bueno')}
+                          onClick={() => handleChecklistChangeLocal(itemKey, 'Bueno')}
                           className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
                             currentVal === 'Bueno'
                               ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs scale-105'
@@ -527,7 +606,7 @@ export default function EquipmentDetailModal({
 
                         <button
                           type="button"
-                          onClick={() => handleDirectChecklistChange(itemKey, 'Regular')}
+                          onClick={() => handleChecklistChangeLocal(itemKey, 'Regular')}
                           className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
                             currentVal === 'Regular'
                               ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-105'
@@ -541,7 +620,7 @@ export default function EquipmentDetailModal({
 
                         <button
                           type="button"
-                          onClick={() => handleDirectChecklistChange(itemKey, 'Malo')}
+                          onClick={() => handleChecklistChangeLocal(itemKey, 'Malo')}
                           className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
                             currentVal === 'Malo'
                               ? 'bg-red-600 text-white border-red-600 shadow-xs scale-105'

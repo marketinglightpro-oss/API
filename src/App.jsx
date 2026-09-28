@@ -689,30 +689,39 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
   // Handle Equipment Record Details Update (Exclusive to Super Admin & Admin)
   const handleUpdateEquipment = async (itemId, updatedFields) => {
+    const targetItem = equipmentList.find((i) => i.id === itemId) || selectedItem;
+
     const normalizedFields = {
       ...updatedFields,
-      inspectionChecklist: parseInspectionChecklist(updatedFields.inspectionChecklist),
     };
+    if (updatedFields.inspectionChecklist) {
+      normalizedFields.inspectionChecklist = parseInspectionChecklist(updatedFields.inspectionChecklist);
+    }
+
+    const fullItem = { ...targetItem, ...normalizedFields };
 
     setEquipmentList((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, ...normalizedFields } : item))
+      prev.map((item) => (item.id === itemId ? { ...item, ...fullItem } : item))
     );
 
     if (selectedItem && selectedItem.id === itemId) {
-      setSelectedItem((prev) => ({ ...prev, ...normalizedFields }));
+      setSelectedItem((prev) => ({ ...prev, ...fullItem }));
     }
 
     const authorName = currentUser
       ? (currentUser.user_metadata?.full_name || currentUser.email)
       : 'Administrador';
 
+    const isInspectionSave = Boolean(updatedFields.lastInspectionDate);
     const newLog = {
       id: `LOG-${Date.now()}`,
       timestamp: new Date().toISOString(),
       user: authorName,
-      role: currentRole === 'super_admin' ? 'Super Admin' : 'Administrador',
-      action: 'Ficha Actualizada',
-      detail: `Ficha de equipo ${normalizedFields.name || itemId} (${itemId}) fue actualizada por ${authorName}.`,
+      role: currentRole === 'super_admin' ? 'Super Admin' : currentRole === 'admin' ? 'Administrador' : currentRole === 'technician' ? 'Técnico' : 'Cliente',
+      action: isInspectionSave ? 'Inspección Guardada' : 'Ficha Actualizada',
+      detail: isInspectionSave
+        ? `Inspección de 10 Puntos actualizada para ${fullItem.name || itemId} (${itemId}) por ${authorName}.`
+        : `Ficha de equipo ${fullItem.name || itemId} (${itemId}) fue actualizada por ${authorName}.`,
       equipmentId: itemId,
     };
     setLogs((prev) => [newLog, ...prev]);
@@ -720,22 +729,36 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     if (isSupabaseConfigured && supabase) {
       try {
         const dbPayload = {
-          name: normalizedFields.name,
-          brand: normalizedFields.brand,
-          category: normalizedFields.category,
-          serial_number: normalizedFields.serialNumber,
-          owner_name: normalizedFields.ownerName,
-          owner_phone: normalizedFields.ownerPhone || null,
-          owner_email: normalizedFields.ownerEmail || null,
-          issue: normalizedFields.issue,
-          priority: normalizedFields.priority,
-          asset_status: normalizedFields.assetStatus,
-          inspection_checklist: normalizedFields.inspectionChecklist,
+          name: fullItem.name,
+          brand: fullItem.brand || 'Genérica',
+          category: fullItem.category,
+          serial_number: fullItem.serialNumber,
+          owner_name: fullItem.ownerName,
+          owner_phone: fullItem.ownerPhone || null,
+          owner_email: fullItem.ownerEmail || null,
+          issue: fullItem.issue,
+          priority: fullItem.priority,
+          status: fullItem.status,
+          asset_status: fullItem.assetStatus || 'En reparación',
+          inspection_checklist: fullItem.inspectionChecklist,
         };
+        if (fullItem.lastInspectionDate) {
+          dbPayload.last_inspection_date = fullItem.lastInspectionDate;
+        }
 
         const { error: updErr } = await supabase.from('equipment').update(dbPayload).eq('id', itemId);
         if (updErr) {
-          console.error('Error actualizando equipo en Supabase:', updErr);
+          console.error('Error actualizando equipo en Supabase (retrying as stringified JSON):', updErr);
+          // Fallback if inspection_checklist is a text column or last_inspection_date is missing
+          delete dbPayload.last_inspection_date;
+          const fallbackPayload = {
+            ...dbPayload,
+            inspection_checklist: JSON.stringify(fullItem.inspectionChecklist),
+          };
+          const { error: retryErr } = await supabase.from('equipment').update(fallbackPayload).eq('id', itemId);
+          if (retryErr) {
+            console.error('Error en reintento de actualización Supabase:', retryErr);
+          }
         }
 
         await saveActivityLogToSupabase(newLog, itemId);
