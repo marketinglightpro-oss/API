@@ -36,7 +36,7 @@ export default function EquipmentDetailModal({
   const [editOwnerPhone, setEditOwnerPhone] = useState(item.ownerPhone || '');
   const [editOwnerEmail, setEditOwnerEmail] = useState(item.ownerEmail || '');
 
-  // Sync state when item changes or edit mode toggles
+  // Sync state when item.id changes
   useEffect(() => {
     if (item) {
       setEditName(item.name || '');
@@ -51,7 +51,22 @@ export default function EquipmentDetailModal({
       setEditOwnerPhone(item.ownerPhone || '');
       setEditOwnerEmail(item.ownerEmail || '');
     }
-  }, [item, isEditing]);
+  }, [item?.id]);
+
+  const handleDirectChecklistChange = (itemKey, newStatus) => {
+    if (isEditing) {
+      handleEditChecklistChange(itemKey, newStatus);
+    } else if (onUpdateEquipment) {
+      const currentObj = parseInspectionChecklist(item.inspectionChecklist);
+      const updatedObj = {
+        ...currentObj,
+        [itemKey]: newStatus,
+      };
+      onUpdateEquipment(item.id, {
+        inspectionChecklist: updatedObj,
+      });
+    }
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (e) => {
@@ -483,9 +498,7 @@ export default function EquipmentDetailModal({
                   <CheckSquare className="w-4 h-4 text-black" />
                   <span>Inspección de Estado por Componente (10 Puntos)</span>
                 </h3>
-                {isEditing && (
-                  <span className="text-[10px] text-gray-400 font-medium">Haz clic para cambiar el estado</span>
-                )}
+                <span className="text-[10px] text-gray-400 font-medium">Haz clic en Bueno, Regular o Malo para cambiar</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -494,58 +507,52 @@ export default function EquipmentDetailModal({
                   const currentVal = checklistObj[itemKey] || 'Bueno';
 
                   return (
-                    <div key={itemKey} className="bg-gray-50 p-2.5 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-2 shadow-xs">
+                    <div key={itemKey} className="bg-gray-50 p-2.5 rounded-2xl border border-gray-200/80 flex items-center justify-between gap-2 shadow-xs hover:border-gray-300 transition-colors">
                       <span className="font-bold text-gray-800 text-xs truncate">{itemKey}</span>
                       
-                      {isEditing ? (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleEditChecklistChange(itemKey, 'Bueno')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
-                              currentVal === 'Bueno' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200'
-                            }`}
-                          >
-                            Bueno
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleEditChecklistChange(itemKey, 'Regular')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
-                              currentVal === 'Regular' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
-                            }`}
-                          >
-                            Regular
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleEditChecklistChange(itemKey, 'Malo')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
-                              currentVal === 'Malo' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200'
-                            }`}
-                          >
-                            Malo
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex-shrink-0">
-                          {currentVal === 'Bueno' && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Bueno
-                            </span>
-                          )}
-                          {currentVal === 'Regular' && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                              <AlertTriangle className="w-3 h-3 text-amber-600" /> Regular
-                            </span>
-                          )}
-                          {currentVal === 'Malo' && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
-                              <XCircle className="w-3 h-3 text-red-600" /> Malo
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleDirectChecklistChange(itemKey, 'Bueno')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
+                            currentVal === 'Bueno'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs scale-105'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                          title="Marcar como Bueno"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Bueno</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDirectChecklistChange(itemKey, 'Regular')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
+                            currentVal === 'Regular'
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-xs scale-105'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                          title="Marcar como Regular"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Regular</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDirectChecklistChange(itemKey, 'Malo')}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-0.5 ${
+                            currentVal === 'Malo'
+                              ? 'bg-red-600 text-white border-red-600 shadow-xs scale-105'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                          title="Marcar como Malo"
+                        >
+                          <XCircle className="w-3 h-3" />
+                          <span>Malo</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
