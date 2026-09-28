@@ -742,23 +742,55 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
         if (updErr || !updData || updData.length === 0) {
           console.warn('Primer intento de actualización en Supabase no devolvió confirmación:', updErr);
-          // Fallback if inspection_checklist is a text column or last_inspection_date is missing
+          
+          // Retry fallback 1: Omit last_inspection_date and stringify inspection_checklist
           delete dbPayload.last_inspection_date;
-          const fallbackPayload = {
+          const fallbackPayload1 = {
             ...dbPayload,
-            inspection_checklist: JSON.stringify(fullItem.inspectionChecklist),
+            inspection_checklist: typeof fullItem.inspectionChecklist === 'string'
+              ? fullItem.inspectionChecklist
+              : JSON.stringify(fullItem.inspectionChecklist),
           };
-          const { data: retryData, error: retryErr } = await supabase
+
+          const { data: retryData1, error: retryErr1 } = await supabase
             .from('equipment')
-            .update(fallbackPayload)
+            .update(fallbackPayload1)
             .eq('id', itemId)
             .select();
 
-          if (retryErr || !retryData || retryData.length === 0) {
-            console.error('Error fatal al actualizar equipo en Supabase:', retryErr);
-            alert(`Atención: La inspección se guardó en memoria pero Supabase rechazó la actualización.\nMotivo: ${retryErr?.message || 'Error de RLS o la tabla "equipment" no tiene la columna last_inspection_date'}.\n\nPor favor ejecuta la actualización SQL en tu panel de Supabase.`);
+          if (retryErr1 || !retryData1 || retryData1.length === 0) {
+            console.warn('Reintento 1 falló, intentando actualización limpia sin campos nuevos opcionales:', retryErr1);
+            
+            // Retry fallback 2: Omit asset_status and brand if columns missing in Supabase schema cache
+            const minimalPayload = {
+              name: fullItem.name,
+              category: fullItem.category,
+              serial_number: fullItem.serialNumber,
+              owner_name: fullItem.ownerName,
+              owner_phone: fullItem.ownerPhone || null,
+              owner_email: fullItem.ownerEmail || null,
+              issue: fullItem.issue,
+              priority: fullItem.priority,
+              status: fullItem.status,
+              inspection_checklist: typeof fullItem.inspectionChecklist === 'string'
+                ? fullItem.inspectionChecklist
+                : JSON.stringify(fullItem.inspectionChecklist),
+            };
+
+            const { data: retryData2, error: retryErr2 } = await supabase
+              .from('equipment')
+              .update(minimalPayload)
+              .eq('id', itemId)
+              .select();
+
+            if (retryErr2 || !retryData2 || retryData2.length === 0) {
+              console.error('Error fatal al actualizar equipo en Supabase:', retryErr2);
+              alert(`Atención: La inspección se guardó en memoria pero tu base de datos de Supabase rechazó el guardado.\n\nMotivo: ${retryErr2?.message || retryErr1?.message || updErr?.message}.\n\nPor favor copia y ejecuta las instrucciones SQL en tu panel de Supabase SQL Editor para añadir las columnas faltantes.`);
+            } else {
+              console.log('[Supabase Sync] Inspección actualizada exitosamente con payload esencial:', retryData2[0]);
+            }
           } else {
-            console.log('[Supabase Sync] Inspección actualizada exitosamente con fallback:', retryData[0]);
+            console.log('[Supabase Sync] Inspección actualizada exitosamente con fallback 1:', retryData1[0]);
           }
         } else {
           console.log('[Supabase Sync] Inspección guardada y confirmada por Supabase:', updData[0]);
