@@ -42,6 +42,7 @@ export default function EquipmentDetailModal({
   const [inspectionSuccessMsg, setInspectionSuccessMsg] = useState(false);
 
   // Sync state when item.id or item inspection properties change
+  const stringifiedChecklistProp = JSON.stringify(item?.inspectionChecklist);
   useEffect(() => {
     if (item) {
       setEditName(item.name || '');
@@ -59,19 +60,17 @@ export default function EquipmentDetailModal({
       setEditOwnerPhone(item.ownerPhone || '');
       setEditOwnerEmail(item.ownerEmail || '');
     }
-  }, [item?.id, item?.inspectionChecklist, item?.lastInspectionDate]);
+  }, [item?.id, stringifiedChecklistProp, item?.lastInspectionDate]);
 
   const handleChecklistChangeLocal = (itemKey, newStatus) => {
     setLocalChecklist((prev) => ({
       ...prev,
       [itemKey]: newStatus,
     }));
-    if (isEditing) {
-      setEditChecklist((prev) => ({
-        ...prev,
-        [itemKey]: newStatus,
-      }));
-    }
+    setEditChecklist((prev) => ({
+      ...prev,
+      [itemKey]: newStatus,
+    }));
   };
 
   const handleSaveInspection = async () => {

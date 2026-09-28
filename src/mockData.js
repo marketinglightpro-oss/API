@@ -53,14 +53,16 @@ export const DEFAULT_INSPECTION_CHECKLIST = {
 export const parseInspectionChecklist = (rawChecklist) => {
   if (!rawChecklist) return { ...DEFAULT_INSPECTION_CHECKLIST };
   let parsed = rawChecklist;
-  if (typeof rawChecklist === 'string') {
+  while (typeof parsed === 'string') {
     try {
-      parsed = JSON.parse(rawChecklist);
+      const temp = JSON.parse(parsed);
+      if (temp === parsed) break;
+      parsed = temp;
     } catch (e) {
-      return { ...DEFAULT_INSPECTION_CHECKLIST };
+      break;
     }
   }
-  if (typeof parsed === 'object' && parsed !== null) {
+  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
     return { ...DEFAULT_INSPECTION_CHECKLIST, ...parsed };
   }
   return { ...DEFAULT_INSPECTION_CHECKLIST };
