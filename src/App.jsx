@@ -168,7 +168,8 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     try {
       const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
       if (!eqErr && eqData) {
-        const deletedSet = new Set(JSON.parse(localStorage.getItem('lightpro_deleted_equipment_ids') || '[]'));
+        const localDeleted = JSON.parse(localStorage.getItem('lightpro_deleted_equipment_ids') || '[]');
+        const deletedSet = new Set([...deletedEquipmentIds, ...localDeleted]);
 
         // Filter out deleted items and retry Supabase delete in background if item returned
         const filteredEq = eqData.filter(item => {
@@ -324,6 +325,10 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
   useEffect(() => {
     localStorage.setItem('lightpro_equipment', JSON.stringify(equipmentList));
   }, [equipmentList]);
+
+  useEffect(() => {
+    localStorage.setItem('lightpro_deleted_equipment_ids', JSON.stringify(deletedEquipmentIds));
+  }, [deletedEquipmentIds]);
 
   useEffect(() => {
     localStorage.setItem('lightpro_logs', JSON.stringify(logs));
@@ -635,7 +640,9 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     }
 
     // Persist deleted ID locally so fetchSupabaseData never restores it
-    setDeletedEquipmentIds((prev) => Array.from(new Set([...prev, itemId])));
+    const updatedDeleted = Array.from(new Set([...deletedEquipmentIds, itemId]));
+    setDeletedEquipmentIds(updatedDeleted);
+    localStorage.setItem('lightpro_deleted_equipment_ids', JSON.stringify(updatedDeleted));
 
     const updatedList = equipmentList.filter((i) => i.id !== itemId);
     setEquipmentList(updatedList);
