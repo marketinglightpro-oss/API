@@ -41,6 +41,7 @@ ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS promised_date TEXT;
 ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT 'Genérica';
 ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS asset_status TEXT DEFAULT 'En reparación';
 ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS inspection_checklist JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.equipment ADD COLUMN IF NOT EXISTS last_inspection_date TEXT;
 
 -- 3. Create Activity Logs Table
 CREATE TABLE IF NOT EXISTS public.activity_logs (
