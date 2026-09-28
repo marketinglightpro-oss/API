@@ -209,7 +209,12 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
       }
 
-      const { data: logData, error: logErr } = await supabase.from('activity_logs').select('*').order('timestamp', { ascending: false });
+      const { data: logData, error: logErr } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(100);
+
       if (!logErr && logData && logData.length > 0) {
         const mappedLogs = logData.map(l => ({
           id: l.id,
@@ -243,7 +248,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
     fetchSupabaseData();
 
-    // Subscribe to Realtime WebSockets for instant multi-user synchronization across tables
+    // Subscribe to Realtime WebSockets for instant multi-user synchronization across tables (Zero Egress Polling)
     const channel = supabase
       .channel('public:realtime_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => {
@@ -265,14 +270,14 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     };
   }, [fetchSupabaseData]);
 
-  // Automatic Background Sync to Supabase (Pulls cloud updates & syncs offline pending items)
+  // Automatic Background Sync to Supabase (Pushes offline pending items only when needed)
   const syncLocalToSupabase = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return;
 
     try {
       setIsSyncing(true);
 
-      // 1. Push any items created offline that explicitly require sync
+      // Push any items created offline that explicitly require sync
       const pendingItems = equipmentList.filter((item) => item._needsSync);
       if (pendingItems.length > 0) {
         for (const item of pendingItems) {
@@ -303,9 +308,9 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
             delete item._needsSync;
           }
         }
+        await fetchSupabaseData();
       }
 
-      await fetchSupabaseData();
       setLastSyncTime(new Date().toLocaleTimeString());
     } catch (err) {
       console.warn('Error en sincronización automática:', err);
@@ -313,24 +318,6 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
       setIsSyncing(false);
     }
   }, [equipmentList, fetchSupabaseData]);
-
-  // Execute background sync interval every 10 seconds
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
-
-    const initialTimeout = setTimeout(() => {
-      syncLocalToSupabase();
-    }, 2000);
-
-    const interval = setInterval(() => {
-      syncLocalToSupabase();
-    }, 10000);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, [syncLocalToSupabase]);
 
   // Sync to localStorage
   useEffect(() => {
