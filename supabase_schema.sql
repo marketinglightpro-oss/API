@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
   detail TEXT NOT NULL
 );
 
+ALTER TABLE public.activity_logs ADD COLUMN IF NOT EXISTS equipment_id TEXT;
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.equipment ENABLE ROW LEVEL SECURITY;
