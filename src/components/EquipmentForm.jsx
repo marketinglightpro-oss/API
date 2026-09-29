@@ -48,7 +48,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const maxDim = 800;
+          const maxDim = 600;
 
           if (width > height) {
             if (width > maxDim) {
@@ -66,7 +66,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+          resolve(canvas.toDataURL('image/jpeg', 0.55));
         };
         img.onerror = () => resolve(event.target.result);
       };

@@ -201,8 +201,8 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           promisedDate: item.promised_date,
           createdAt: item.created_at,
           createdBy: item.created_by || item.created_user || item.history?.[0]?.updatedBy || item.owner_name || 'Sistema',
-          photoUrl: item.photo_url,
-          photos: item.photos || (item.photo_url ? [item.photo_url] : []),
+          photoUrl: item.photo_url || (Array.isArray(item.photos) && item.photos.length > 0 ? item.photos[0] : null),
+          photos: Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : (item.photo_url ? [item.photo_url] : []),
           notes: item.notes || [],
           history: item.history || [],
         }));
@@ -589,37 +589,27 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         if (eqErr) {
           console.error('Error al guardar equipo completo en Supabase:', eqErr);
           
-          // Fallback 1: Remove base64 photos/photo_url keys completely to avoid column missing or payload size errors
-          console.warn('Reintentando guardar equipo en Supabase sin llaves de imagenes...');
-          const fallbackPayload1 = { ...fullPayload };
-          delete fallbackPayload1.photos;
-          delete fallbackPayload1.photo_url;
+          // Retry basic core payload only if database schema is missing columns
+          const minimalPayload = {
+            id: newRecord.id,
+            name: newRecord.name,
+            category: newRecord.category,
+            serial_number: newRecord.serialNumber,
+            owner_name: newRecord.ownerName,
+            owner_phone: newRecord.ownerPhone || null,
+            owner_email: newRecord.ownerEmail || null,
+            issue: newRecord.issue,
+            priority: newRecord.priority,
+            status: newRecord.status,
+            created_at: newRecord.createdAt,
+            photo_url: newRecord.photoUrl || null,
+            photos: newRecord.photos || [],
+          };
 
-          const { error: retryErr1 } = await supabase.from('equipment').insert([fallbackPayload1]);
-
-          if (retryErr1) {
-            console.error('Error en reintento 1 de Supabase:', retryErr1);
-            
-            // Fallback 2: Basic core payload only
-            const minimalPayload = {
-              id: newRecord.id,
-              name: newRecord.name,
-              category: newRecord.category,
-              serial_number: newRecord.serialNumber,
-              owner_name: newRecord.ownerName,
-              owner_phone: newRecord.ownerPhone || null,
-              owner_email: newRecord.ownerEmail || null,
-              issue: newRecord.issue,
-              priority: newRecord.priority,
-              status: newRecord.status,
-              created_at: newRecord.createdAt,
-            };
-
-            const { error: retryErr2 } = await supabase.from('equipment').insert([minimalPayload]);
-            if (retryErr2) {
-              console.error('Error fatal al guardar equipo en Supabase:', retryErr2);
-              alert(`Atención: El equipo (${newRecord.id}) quedó registrado en la aplicación local pero no se pudo sincronizar en la tabla "equipment" de Supabase.\n\nMotivo: ${retryErr2.message || 'Error de permisos RLS o la tabla equipment requiere actualización SQL.'}\n\nRevisa el archivo supabase_schema.sql para ejecutar las políticas SQL necesarias.`);
-            }
+          const { error: retryErr } = await supabase.from('equipment').insert([minimalPayload]);
+          if (retryErr) {
+            console.error('Error fatal al guardar equipo en Supabase:', retryErr);
+            alert(`Atención: El equipo (${newRecord.id}) quedó registrado en la aplicación local pero no se pudo sincronizar en Supabase.\n\nMotivo: ${retryErr.message || 'Error de permisos RLS o consulta SQL requerida.'}`);
           }
         }
 
@@ -858,12 +848,6 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
         if (noteErr) {
           console.error('Error al actualizar notas en Supabase:', noteErr);
-          // Fallback if heavy base64 photos caused payload size error
-          const sanitizedNotes = updatedNotes.map(n => ({
-            ...n,
-            photos: (n.photos || []).map(p => p.length > 50000 ? '[Foto]' : p)
-          }));
-          await supabase.from('equipment').update({ notes: sanitizedNotes }).eq('id', itemId);
         } else {
           console.log(`[Supabase Notes] Guardado exitoso en equipo ${itemId}`);
         }
