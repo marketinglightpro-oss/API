@@ -183,7 +183,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         });
 
         const mapped = filteredEq.map(item => ({
-          id: item.id,
+          id: (item.id || '').trim(),
           name: item.name,
           brand: item.brand || 'Genérica',
           category: item.category,
@@ -731,10 +731,13 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           dbPayload.last_inspection_date = fullItem.lastInspectionDate;
         }
 
+        const cleanId = (itemId || '').trim();
+        const idCondition = `id.eq.${cleanId},id.eq.${itemId}`;
+
         const { data: updData, error: updErr } = await supabase
           .from('equipment')
           .update(dbPayload)
-          .eq('id', itemId)
+          .or(idCondition)
           .select();
 
         if (updErr || !updData || updData.length === 0) {
@@ -752,7 +755,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           const { data: retryData1, error: retryErr1 } = await supabase
             .from('equipment')
             .update(fallbackPayload1)
-            .eq('id', itemId)
+            .or(idCondition)
             .select();
 
           if (retryErr1 || !retryData1 || retryData1.length === 0) {
@@ -777,7 +780,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
             const { data: retryData2, error: retryErr2 } = await supabase
               .from('equipment')
               .update(minimalPayload)
-              .eq('id', itemId)
+              .or(idCondition)
               .select();
 
             if (retryErr2 || !retryData2 || retryData2.length === 0) {
