@@ -1,8 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Reads Environment Variables from Vite (.env or Vercel Environment Variables)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nqiiwijmqbucgttluhil.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xaWl3aWptcWJ1Y2d0dGx1aGlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NTg4OTgsImV4cCI6MjEwNjQzNDg5OH0.Y7U3finEhRHJb_3qH3HlvXfWB1J5zjKa7XcSN6f_EN4';
+let rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
+let rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Force override if Vercel environment variables still point to old restricted Supabase project
+if (!rawUrl || rawUrl.includes('tkggaruybosahwxthkpd')) {
+  rawUrl = 'https://nqiiwijmqbucgttluhil.supabase.co';
+  rawKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xaWl3aWptcWJ1Y2d0dGx1aGlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NTg4OTgsImV4cCI6MjEwNjQzNDg5OH0.Y7U3finEhRHJb_3qH3HlvXfWB1J5zjKa7XcSN6f_EN4';
+}
+
+const supabaseUrl = rawUrl;
+const supabaseAnonKey = rawKey;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
