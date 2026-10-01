@@ -320,6 +320,16 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
       const pendingItems = equipmentList.filter((item) => item._needsSync);
       if (pendingItems.length > 0) {
         for (const item of pendingItems) {
+          let storagePhotos = [];
+          if (item.photos && item.photos.length > 0) {
+            const uploadedUrls = await Promise.all(
+              item.photos.map((p) => uploadImageToSupabaseStorage(p, item.id))
+            );
+            storagePhotos = uploadedUrls.filter(Boolean);
+          }
+
+          const mainPhotoUrl = storagePhotos[0] || (typeof item.photoUrl === 'string' && item.photoUrl.startsWith('http') ? item.photoUrl : null);
+
           const fullPayload = {
             id: item.id,
             name: item.name,
@@ -337,8 +347,8 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
             technician_assigned: item.technicianAssigned || null,
             promised_date: item.promisedDate || null,
             created_at: item.createdAt,
-            photo_url: item.photoUrl || null,
-            photos: item.photos || [],
+            photo_url: mainPhotoUrl,
+            photos: storagePhotos,
             notes: item.notes || [],
             history: item.history || [],
           };
