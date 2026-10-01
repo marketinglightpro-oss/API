@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import MetricsOverview from './components/MetricsOverview';
 import KanbanBoard from './components/KanbanBoard';
