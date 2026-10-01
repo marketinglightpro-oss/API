@@ -10,7 +10,7 @@ import ActivityLogView from './components/ActivityLogView';
 import UserManagementView from './components/UserManagementView';
 import LoginScreen from './components/LoginScreen';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES, DEFAULT_INSPECTION_CHECKLIST, parseInspectionChecklist } from './mockData';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { supabase, isSupabaseConfigured, uploadImageToSupabaseStorage } from './supabaseClient';
 import { Shield, Wrench, User, Database } from 'lucide-react';
 
 export default function App() {
@@ -570,6 +570,18 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
+        // Upload images to Supabase Storage bucket 'equipment-images'
+        let storagePhotos = [];
+        if (newRecord.photos && newRecord.photos.length > 0) {
+          console.log(`[Storage] Subiendo ${newRecord.photos.length} imágenes a Supabase Storage...`);
+          const uploadedUrls = await Promise.all(
+            newRecord.photos.map((p) => uploadImageToSupabaseStorage(p, newRecord.id))
+          );
+          storagePhotos = uploadedUrls.filter(Boolean);
+        }
+
+        const mainPhotoUrl = storagePhotos[0] || (typeof newRecord.photoUrl === 'string' && newRecord.photoUrl.startsWith('http') ? newRecord.photoUrl : null);
+
         const fullPayload = {
           id: newRecord.id,
           name: newRecord.name,
@@ -587,8 +599,8 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           technician_assigned: newRecord.technicianAssigned || null,
           created_at: newRecord.createdAt,
           created_by: authorName,
-          photo_url: newRecord.photoUrl || null,
-          photos: newRecord.photos || [],
+          photo_url: mainPhotoUrl,
+          photos: storagePhotos,
           notes: newRecord.notes || [],
           history: newRecord.history || [],
         };
@@ -855,8 +867,26 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
-        console.log(`[Supabase Notes] Guardando ${updatedNotes.length} notas en equipo ${itemId}...`);
-        const { error: noteErr } = await supabase.from('equipment').update({ notes: updatedNotes }).eq('id', itemId);
+        // Upload any new note photos to Supabase Storage bucket 'equipment-images'
+        let noteStoragePhotos = [];
+        if (note.photos && note.photos.length > 0) {
+          console.log(`[Storage Notes] Subiendo ${note.photos.length} evidencia(s) a Supabase Storage...`);
+          const uploadedNoteUrls = await Promise.all(
+            note.photos.map((p) => uploadImageToSupabaseStorage(p, `note-${itemId}`))
+          );
+          noteStoragePhotos = uploadedNoteUrls.filter(Boolean);
+        }
+
+        const noteWithPublicUrls = {
+          ...note,
+          photos: noteStoragePhotos.length > 0 ? noteStoragePhotos : note.photos,
+        };
+
+        const existingNotes = targetItem?.notes || (selectedItem?.id === itemId ? selectedItem.notes : []) || [];
+        const persistentNotes = [noteWithPublicUrls, ...existingNotes.filter(n => n.id !== note.id)];
+
+        console.log(`[Supabase Notes] Guardando ${persistentNotes.length} notas en equipo ${itemId}...`);
+        const { error: noteErr } = await supabase.from('equipment').update({ notes: persistentNotes }).eq('id', itemId);
 
         if (noteErr) {
           console.error('Error al actualizar notas en Supabase:', noteErr);

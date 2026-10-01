@@ -11,6 +11,58 @@ export const supabase = isSupabaseConfigured
   : null;
 
 /**
+ * Uploads an image (File or Base64 string) to Supabase Storage bucket 'equipment-images'
+ * and returns the public CDN URL string.
+ */
+export const uploadImageToSupabaseStorage = async (fileOrBase64, prefix = 'img') => {
+  if (!supabase) return null;
+  try {
+    let blob;
+    if (typeof fileOrBase64 === 'string') {
+      if (fileOrBase64.startsWith('http://') || fileOrBase64.startsWith('https://')) {
+        // Already a public URL
+        return fileOrBase64;
+      }
+      if (fileOrBase64.startsWith('data:')) {
+        const response = await fetch(fileOrBase64);
+        blob = await response.blob();
+      } else {
+        return null;
+      }
+    } else if (fileOrBase64 instanceof File || fileOrBase64 instanceof Blob) {
+      blob = fileOrBase64;
+    } else {
+      return null;
+    }
+
+    const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.jpg`;
+    const filePath = `equipment/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('equipment-images')
+      .upload(filePath, blob, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Error subiendo imagen a Supabase Storage:', error);
+      // If storage error occurs, return original base64 as fallback so photo isn't lost
+      return typeof fileOrBase64 === 'string' ? fileOrBase64 : null;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('equipment-images')
+      .getPublicUrl(filePath);
+
+    return publicUrlData?.publicUrl || null;
+  } catch (err) {
+    console.error('Error general al subir a Storage:', err);
+    return typeof fileOrBase64 === 'string' ? fileOrBase64 : null;
+  }
+};
+
+/**
  * SQL Schema script to create tables in Supabase SQL Editor:
  * 
  * -- 1. Equipment Table
