@@ -162,8 +162,8 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
   }
 };
 
-  // Fetch data from Supabase Database
-  const fetchSupabaseData = useCallback(async () => {
+  // Decoupled fetchers to minimize Supabase API Egress bandwidth
+  const fetchEquipmentData = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase) return;
     try {
       const { data: eqData, error: eqErr } = await supabase.from('equipment').select('*').order('created_at', { ascending: false });
@@ -171,16 +171,7 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         const localDeleted = JSON.parse(localStorage.getItem('lightpro_deleted_equipment_ids') || '[]');
         const deletedSet = new Set([...deletedEquipmentIds, ...localDeleted]);
 
-        // Filter out deleted items and retry Supabase delete in background if item returned
-        const filteredEq = eqData.filter(item => {
-          if (deletedSet.has(item.id)) {
-            supabase.from('equipment').delete().eq('id', item.id).then(({ error }) => {
-              if (!error) console.log(`[Self-Healing Delete] Re-eliminado equipo ${item.id} de Supabase.`);
-            });
-            return false;
-          }
-          return true;
-        });
+        const filteredEq = eqData.filter(item => !deletedSet.has(item.id));
 
         const mapped = filteredEq.map(item => ({
           id: (item.id || '').trim(),
@@ -210,12 +201,19 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         setEquipmentList(mapped);
         localStorage.setItem('lightpro_equipment', JSON.stringify(mapped));
       }
+    } catch (err) {
+      console.warn('Supabase equipment fetch error:', err);
+    }
+  }, [deletedEquipmentIds]);
 
+  const fetchLogsData = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
       const { data: logData, error: logErr } = await supabase
         .from('activity_logs')
         .select('*')
         .order('timestamp', { ascending: false })
-        .limit(100);
+        .limit(50);
 
       if (!logErr && logData && logData.length > 0) {
         const mappedLogs = logData.map(l => ({
@@ -234,15 +232,26 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
           return [...unsyncedLocal, ...mappedLogs];
         });
       }
+    } catch (err) {
+      console.warn('Supabase logs fetch error:', err);
+    }
+  }, []);
 
+  const fetchProfilesData = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
       const { data: profileData, error: profErr } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
       if (!profErr && profileData && profileData.length > 0) {
         setTeamMembers(profileData);
       }
     } catch (err) {
-      console.warn('Supabase fetch error, using local state:', err);
+      console.warn('Supabase profiles fetch error:', err);
     }
   }, []);
+
+  const fetchSupabaseData = useCallback(async () => {
+    await Promise.all([fetchEquipmentData(), fetchLogsData(), fetchProfilesData()]);
+  }, [fetchEquipmentData, fetchLogsData, fetchProfilesData]);
 
   // Sync with Supabase Database Tables on Mount & Subscribe to Realtime WebSockets
   useEffect(() => {
@@ -250,27 +259,27 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
 
     fetchSupabaseData();
 
-    // Subscribe to Realtime WebSockets for instant multi-user synchronization across tables (Zero Egress Polling)
+    // Targeted Realtime WebSockets per table (Zero Egress Polling)
     const channel = supabase
       .channel('public:realtime_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => {
-        console.log('[Realtime] Cambio detectado en equipos. Sincronizando cuentas...');
-        fetchSupabaseData();
+        console.log('[Realtime] Cambio detectado en equipos -> actualizando solo equipos');
+        fetchEquipmentData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        console.log('[Realtime] Cambio detectado en perfiles. Sincronizando perfiles...');
-        fetchSupabaseData();
+        console.log('[Realtime] Cambio detectado en perfiles -> actualizando solo perfiles');
+        fetchProfilesData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_logs' }, () => {
-        console.log('[Realtime] Nuevo log de actividad detectado. Actualizando auditoría...');
-        fetchSupabaseData();
+        console.log('[Realtime] Nuevo log de actividad -> actualizando solo auditoría');
+        fetchLogsData();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSupabaseData]);
+  }, [fetchSupabaseData, fetchEquipmentData, fetchLogsData, fetchProfilesData]);
 
   // Automatic Background Sync to Supabase (Pushes offline pending items only when needed)
   const syncLocalToSupabase = useCallback(async () => {
