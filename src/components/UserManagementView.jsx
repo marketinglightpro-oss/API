@@ -624,7 +624,7 @@ export default function UserManagementView({ currentUser, currentRole = 'super_a
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="andres@lightpro.com"
+                    placeholder="usuario@lightpro.com"
                     className="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
                     required
                   />

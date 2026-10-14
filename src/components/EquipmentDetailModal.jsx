@@ -914,8 +914,6 @@ export default function EquipmentDetailModal({
                           {m.full_name} ({getRoleLabel(m.role)})
                         </option>
                       ))}
-                      {!teamMembers.some(m => m.full_name === 'Carlos Mendoza') && <option value="Carlos Mendoza">Carlos Mendoza (Técnico)</option>}
-                      {!teamMembers.some(m => m.full_name === 'Andrés Silva') && <option value="Andrés Silva">Andrés Silva (Administrador)</option>}
                     </select>
                   ) : (
                     <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-xs">

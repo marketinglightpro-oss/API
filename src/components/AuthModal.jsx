@@ -164,7 +164,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ej. Carlos Mendoza"
+                  placeholder="Ej. Juan Pérez"
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black"
                   required
                 />

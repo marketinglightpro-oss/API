@@ -15,7 +15,7 @@ export default function EquipmentForm({ onAddEquipment, onClose, currentRole }) 
     priority: 'Media',
     assetStatus: 'En reparación',
     inspectionChecklist: { ...DEFAULT_INSPECTION_CHECKLIST },
-    technicianAssigned: currentRole === 'technician' ? 'Técnico Usuario' : 'Carlos Mendoza',
+    technicianAssigned: currentRole === 'technician' ? 'Técnico Usuario' : '',
     photoUrl: '',
     photos: [],
   });
