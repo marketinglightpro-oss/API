@@ -8,6 +8,7 @@ import QRScannerModal from './components/QRScannerModal';
 import EquipmentDetailModal from './components/EquipmentDetailModal';
 import ActivityLogView from './components/ActivityLogView';
 import UserManagementView from './components/UserManagementView';
+import HorariosView from './components/HorariosView';
 import LoginScreen from './components/LoginScreen';
 import { INITIAL_EQUIPMENT, INITIAL_LOGS, KANBAN_STAGES, DEFAULT_INSPECTION_CHECKLIST, parseInspectionChecklist } from './mockData';
 import { supabase, isSupabaseConfigured, uploadImageToSupabaseStorage } from './supabaseClient';
@@ -1075,7 +1076,15 @@ const saveActivityLogToSupabase = async (newLog, equipmentId = null) => {
         />
       )}
 
-      {(activeTab === 'herramientas' || activeTab === 'alquileres' || activeTab === 'horarios') && (
+      {activeTab === 'horarios' && (
+        <HorariosView
+          currentUser={currentUser}
+          currentRole={currentRole}
+          teamMembers={teamMembers}
+        />
+      )}
+
+      {(activeTab === 'herramientas' || activeTab === 'alquileres') && (
         <div className="max-w-7xl mx-auto px-3 sm:px-4 my-8 animate-fadeIn">
           <div className="liquid-card rounded-3xl p-8 sm:p-12 text-center bg-white border border-gray-200 shadow-xl space-y-4">
             <div className="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center mx-auto shadow-lg text-2xl font-bold">

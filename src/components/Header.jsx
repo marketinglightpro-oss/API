@@ -25,7 +25,7 @@ export default function Header({
     { id: 'logs', label: 'Historial / Auditoría', shortLabel: 'Auditoría', icon: Activity, roles: ['super_admin', 'admin'] },
     { id: 'herramientas', label: 'Herramientas', shortLabel: 'Herramientas', icon: Wrench, badge: 'Próximamente' },
     { id: 'alquileres', label: 'Alquileres', shortLabel: 'Alquileres', icon: PlusCircle, badge: 'Próximamente' },
-    { id: 'horarios', label: 'Horarios', shortLabel: 'Horarios', icon: Clock, badge: 'Próximamente' },
+    { id: 'horarios', label: 'Horarios', shortLabel: 'Horarios', icon: Clock },
   ];
 
   const tabs = allTabs.filter(tab => !tab.roles || tab.roles.includes(currentRole));
