@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
   user_email TEXT,
   work_date DATE NOT NULL DEFAULT CURRENT_DATE,
   check_in_time TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-  check_in_photo_url TEXT NOT NULL,
+  check_in_photo_url TEXT,
   check_in_location TEXT DEFAULT 'Sede Light Pro',
   check_in_lat NUMERIC(10, 7),
   check_in_lng NUMERIC(10, 7),
@@ -108,6 +108,7 @@ ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS check_in_lng NUME
 ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS check_out_location TEXT;
 ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS check_out_lat NUMERIC(10, 7);
 ALTER TABLE public.attendance_records ADD COLUMN IF NOT EXISTS check_out_lng NUMERIC(10, 7);
+ALTER TABLE public.attendance_records ALTER COLUMN check_in_photo_url DROP NOT NULL;
 
 -- Constraint atómico: Solo una sesión 'open' permitida por usuario simultáneamente
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_single_open_session
@@ -207,6 +208,10 @@ CREATE POLICY "Colaborador actualiza su registro activo" ON public.attendance_re
   FOR UPDATE USING (
     (auth.uid() = user_id AND status = 'open') OR
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'super_admin'))
+  )
+  WITH CHECK (
+    auth.uid() = user_id OR
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'super_admin'))
   );
 
 -- Políticas para attendance_corrections_log
@@ -245,3 +250,14 @@ CREATE POLICY "Colaborador y Admin leen fotos de asistencia" ON storage.objects
       EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'super_admin'))
     )
   );
+
+-- 8. Habilitar Supabase Realtime para sincronización instantánea entre PC y Celular
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'attendance_records'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance_records;
+  END IF;
+END $$;

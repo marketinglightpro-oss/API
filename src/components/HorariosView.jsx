@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Clock,
   Calendar,
@@ -9,8 +9,6 @@ import {
   TrendingUp,
   Download,
   Filter,
-  Eye,
-  Edit3,
   Camera,
   LogIn,
   LogOut,
@@ -23,7 +21,10 @@ import {
   HelpCircle,
   MapPin,
   Navigation,
-  ExternalLink
+  ExternalLink,
+  Edit3,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import LiveCameraModal from './LiveCameraModal';
 import {
@@ -38,121 +39,36 @@ import {
 } from '../utils/attendanceCalculations';
 import { supabase, isSupabaseConfigured, uploadImageToSupabaseStorage } from '../supabaseClient';
 
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default function HorariosView({ currentUser, currentRole, teamMembers = [] }) {
   const isAdmin = currentRole === 'super_admin' || currentRole === 'admin';
 
   // Subtab navigation: 'personal' | 'admin' | 'config'
   const [activeSubTab, setActiveSubTab] = useState(isAdmin ? 'admin' : 'personal');
 
-  // Attendance Records State
+  // Attendance Records State - Clean without hardcoded mock records
   const [records, setRecords] = useState(() => {
     const saved = localStorage.getItem('lightpro_attendance_records');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Discard any old mock test records that start with 'rec-00'
+        return parsed.filter(r => !r.id?.startsWith('rec-00'));
       } catch (e) {
         console.error(e);
       }
     }
-    // Initial mock records for immediate testing
-    return [
-      {
-        id: 'rec-001',
-        user_id: currentUser?.id || 'mock-user-1',
-        user_name: currentUser?.user_metadata?.full_name || currentUser?.email || 'Mariana Velandia',
-        user_email: currentUser?.email || 'mariana@lightpro.com',
-        work_date: new Date(Date.now() - 86400000 * 2).toISOString().substring(0, 10),
-        check_in_time: new Date(Date.now() - 86400000 * 2 + 8 * 3600000).toISOString(),
-        check_in_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        check_in_location: 'Sede Light Pro',
-        check_in_lat: 4.6760,
-        check_in_lng: -74.0480,
-        check_out_time: new Date(Date.now() - 86400000 * 2 + 18 * 3600000).toISOString(),
-        check_out_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        check_out_location: 'Sede Light Pro',
-        check_out_lat: 4.6760,
-        check_out_lng: -74.0480,
-        status: 'completed',
-        gross_minutes: 600,
-        lunch_break_minutes: 60,
-        effective_minutes: 540,
-        reference_minutes: 540,
-        balance_minutes: 0,
-        compensated_minutes: 0,
-        extra_daytime_minutes: 0,
-        extra_nighttime_minutes: 0,
-        extra_sunday_holiday_day_minutes: 0,
-        extra_sunday_holiday_night_minutes: 0,
-        extra_money_amount: 0,
-        review_status: 'normal',
-        review_notes: '',
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-      },
-      {
-        id: 'rec-002',
-        user_id: currentUser?.id || 'mock-user-1',
-        user_name: currentUser?.user_metadata?.full_name || currentUser?.email || 'Mariana Velandia',
-        user_email: currentUser?.email || 'mariana@lightpro.com',
-        work_date: new Date(Date.now() - 86400000).toISOString().substring(0, 10),
-        check_in_time: new Date(Date.now() - 86400000 + 8 * 3600000).toISOString(),
-        check_in_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        check_in_location: 'Sede Light Pro',
-        check_in_lat: 4.6760,
-        check_in_lng: -74.0480,
-        check_out_time: new Date(Date.now() - 86400000 + 20.5 * 3600000).toISOString(),
-        check_out_photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-        check_out_location: 'Sede Light Pro',
-        check_out_lat: 4.6760,
-        check_out_lng: -74.0480,
-        status: 'completed',
-        gross_minutes: 750,
-        lunch_break_minutes: 60,
-        effective_minutes: 690,
-        reference_minutes: 540,
-        balance_minutes: 150,
-        compensated_minutes: 0,
-        extra_daytime_minutes: 60,
-        extra_nighttime_minutes: 90,
-        extra_sunday_holiday_day_minutes: 0,
-        extra_sunday_holiday_night_minutes: 0,
-        extra_money_amount: 25073,
-        review_status: 'approved',
-        review_notes: 'Jornada extendida autorizada para entrega de equipos',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: 'rec-003',
-        user_id: 'colab-stiven',
-        user_name: 'Stiven Bouvier',
-        user_email: 'stiven@lightpro.com',
-        work_date: new Date().toISOString().substring(0, 10),
-        check_in_time: new Date(new Date().setHours(8, 14, 0, 0)).toISOString(),
-        check_in_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-        check_in_location: 'Sede Light Pro',
-        check_in_lat: 4.6760,
-        check_in_lng: -74.0480,
-        check_out_time: new Date(new Date().setHours(18, 7, 0, 0)).toISOString(),
-        check_out_photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
-        check_out_location: 'Cra. 15 #85-12, Bogotá',
-        check_out_lat: 4.6710,
-        check_out_lng: -74.0530,
-        status: 'completed',
-        gross_minutes: 593,
-        lunch_break_minutes: 60,
-        effective_minutes: 533,
-        reference_minutes: 540,
-        balance_minutes: -7,
-        compensated_minutes: 0,
-        extra_daytime_minutes: 0,
-        extra_nighttime_minutes: 0,
-        extra_sunday_holiday_day_minutes: 0,
-        extra_sunday_holiday_night_minutes: 0,
-        extra_money_amount: 0,
-        review_status: 'pending_review',
-        review_notes: 'Marca con minutos impares (08:14 - 18:07). Requiere revisión de intervalo.',
-        created_at: new Date().toISOString(),
-      }
-    ];
+    return [];
   });
 
   // Schedules and Rates Configurations State
@@ -172,21 +88,18 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
     return saved ? JSON.parse(saved) : DEFAULT_SEDE_CONFIG;
   });
 
-  // Sync to localStorage
-  useEffect(() => {
-    localStorage.setItem('lightpro_sede_config', JSON.stringify(sedeConfig));
-  }, [sedeConfig]);
+  // Modals & Camera State
+  const [cameraModalConfig, setCameraModalConfig] = useState({ isOpen: false, mode: 'in' });
+  const [photoPreviewModal, setPhotoPreviewModal] = useState({ isOpen: false, url: '', title: '' });
+  const [adjustmentModal, setAdjustmentModal] = useState({ isOpen: false, record: null, reason: '', inTime: '', outTime: '' });
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Filter States for Admin Dashboard
   const [filterUser, setFilterUser] = useState('all');
   const [filterDateRange, setFilterDateRange] = useState('all'); // 'today' | 'week' | 'month' | 'all'
   const [filterReviewStatus, setFilterReviewStatus] = useState('all'); // 'all' | 'pending_review' | 'with_overtime' | 'open'
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Modals State
-  const [cameraModalConfig, setCameraModalConfig] = useState({ isOpen: false, mode: 'in' });
-  const [photoPreviewModal, setPhotoPreviewModal] = useState({ isOpen: false, url: '', title: '' });
-  const [adjustmentModal, setAdjustmentModal] = useState({ isOpen: false, record: null, reason: '', inTime: '', outTime: '' });
 
   // Shift Timer for personal view
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -204,65 +117,113 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
     localStorage.setItem('lightpro_rates_config', JSON.stringify(rates));
   }, [rates]);
 
-  // Sync with Supabase on Mount
   useEffect(() => {
-    const fetchSupabaseAttendance = async () => {
-      if (!isSupabaseConfigured || !supabase) return;
-      try {
-        const { data: dbRecords, error } = await supabase
-          .from('attendance_records')
-          .select('*')
-          .order('check_in_time', { ascending: false });
+    localStorage.setItem('lightpro_sede_config', JSON.stringify(sedeConfig));
+  }, [sedeConfig]);
 
-        if (!error && dbRecords && dbRecords.length > 0) {
-          setRecords(dbRecords);
-        }
+  // Fetch latest attendance records from Supabase
+  const fetchSupabaseAttendance = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    setIsSyncing(true);
+    try {
+      const { data: dbRecords, error } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .order('check_in_time', { ascending: false });
 
-        const { data: dbSchedules } = await supabase.from('schedules_config').select('*');
-        if (dbSchedules && dbSchedules.length > 0) {
-          const map = {};
-          dbSchedules.forEach(s => {
-            map[s.day_of_week] = {
-              dayOfWeek: s.day_of_week,
-              dayName: s.day_name,
-              isWorkday: s.is_workday,
-              startTime: s.start_time?.substring(0, 5) || '08:00',
-              endTime: s.end_time?.substring(0, 5) || '18:00',
-              referenceHours: Number(s.reference_hours) || 9.0,
-              lunchMinutes: s.lunch_break_minutes || 60,
-              minHoursForLunch: Number(s.min_hours_for_lunch) || 5.0,
-            };
-          });
-          setSchedules(map);
-        }
-
-        const { data: dbRates } = await supabase.from('overtime_rates_config').select('*');
-        if (dbRates && dbRates.length > 0) {
-          const map = {};
-          dbRates.forEach(r => {
-            map[r.rate_code] = {
-              code: r.rate_code,
-              name: r.description,
-              rate: Number(r.hourly_rate),
-              startTime: r.start_time?.substring(0, 5) || '06:00',
-              endTime: r.end_time?.substring(0, 5) || '19:00',
-            };
-          });
-          setRates(map);
-        }
-      } catch (err) {
-        console.warn('Nota de sincronización Supabase Horarios:', err);
+      if (!error && dbRecords) {
+        setRecords(dbRecords);
+      } else if (error) {
+        console.warn('Error al consultar attendance_records:', error);
       }
-    };
 
+      const { data: dbSchedules } = await supabase.from('schedules_config').select('*');
+      if (dbSchedules && dbSchedules.length > 0) {
+        const map = {};
+        dbSchedules.forEach(s => {
+          map[s.day_of_week] = {
+            dayOfWeek: s.day_of_week,
+            dayName: s.day_name,
+            isWorkday: s.is_workday,
+            startTime: s.start_time?.substring(0, 5) || '08:00',
+            endTime: s.end_time?.substring(0, 5) || '18:00',
+            referenceHours: Number(s.reference_hours) || 9.0,
+            lunchMinutes: s.lunch_break_minutes || 60,
+            minHoursForLunch: Number(s.min_hours_for_lunch) || 5.0,
+          };
+        });
+        setSchedules(map);
+      }
+
+      const { data: dbRates } = await supabase.from('overtime_rates_config').select('*');
+      if (dbRates && dbRates.length > 0) {
+        const map = {};
+        dbRates.forEach(r => {
+          map[r.rate_code] = {
+            code: r.rate_code,
+            name: r.description,
+            rate: Number(r.hourly_rate),
+            startTime: r.start_time?.substring(0, 5) || '06:00',
+            endTime: r.end_time?.substring(0, 5) || '19:00',
+          };
+        });
+        setRates(map);
+      }
+    } catch (err) {
+      console.warn('Nota de sincronización Supabase Horarios:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Sync on Mount
+  useEffect(() => {
     fetchSupabaseAttendance();
   }, []);
 
+  // Realtime WebSocket Subscription for Live Cross-Device Sync (PC <-> Celular)
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const channel = supabase
+      .channel('attendance_live_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance_records' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setRecords(prev => {
+              if (prev.some(r => r.id === payload.new.id)) {
+                return prev.map(r => r.id === payload.new.id ? payload.new : r);
+              }
+              return [payload.new, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            setRecords(prev => prev.map(r => r.id === payload.new.id ? payload.new : r));
+          } else if (payload.eventType === 'DELETE') {
+            setRecords(prev => prev.filter(r => r.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Match records belonging to current user by user_id or email
+  const isRecordOfUser = (r) => {
+    if (!currentUser) return false;
+    const matchId = currentUser.id && r.user_id === currentUser.id;
+    const matchEmail = currentUser.email && r.user_email && r.user_email.toLowerCase() === currentUser.email.toLowerCase();
+    return Boolean(matchId || matchEmail);
+  };
+
   // Find active personal record (open shift for current user)
-  const currentUserId = currentUser?.id || 'mock-user-1';
   const activePersonalRecord = useMemo(() => {
-    return records.find(r => r.user_id === currentUserId && r.status === 'open');
-  }, [records, currentUserId]);
+    return records.find(r => isRecordOfUser(r) && r.status === 'open');
+  }, [records, currentUser]);
 
   // Live timer for active shift
   useEffect(() => {
@@ -292,8 +253,8 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
 
   // User's own records (filtered strictly for privacy)
   const myRecords = useMemo(() => {
-    return records.filter(r => r.user_id === currentUserId);
-  }, [records, currentUserId]);
+    return records.filter(r => isRecordOfUser(r));
+  }, [records, currentUser]);
 
   // Compute personal balance metrics
   const myMetrics = useMemo(() => {
@@ -351,7 +312,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
           console.warn('GPS location request warning:', err);
           resolve(null);
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 30000 }
       );
     });
   };
@@ -370,123 +331,157 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
     alert(`Ubicación de la sede fijada exitosamente a:\nLatitud: ${coords.lat.toFixed(6)}\nLongitud: ${coords.lng.toFixed(6)}\nRadio: ${sedeConfig.radiusMeters || 200} metros`);
   };
 
-  // Handlers for Camera Capture & Attendance Check-In / Check-Out
+  // Photo & GPS Registration Handler
   const handlePhotoCaptured = async (photoBase64) => {
     const mode = cameraModalConfig.mode; // 'in' or 'out'
     const nowIso = new Date().toISOString();
+    setIsRegistering(true);
 
-    // Capture device GPS & resolve location string (200m rule vs. street address)
-    const coords = await getCurrentDeviceLocation();
-    const locationText = await resolveLocationText(coords, sedeConfig);
-
-    let remotePhotoUrl = photoBase64;
     try {
-      // Attempt upload to Supabase Storage
-      const uploaded = await uploadImageToSupabaseStorage(photoBase64, `attendance-${mode}`);
-      if (uploaded) remotePhotoUrl = uploaded;
-    } catch (e) {
-      console.warn('Storage upload fallback to base64:', e);
-    }
+      // 0. Ensure we have the valid Supabase Auth User ID (UUID)
+      let resolvedUserId = currentUser?.id;
+      let resolvedEmail = currentUser?.email || '';
+      let resolvedName = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Colaborador';
 
-    if (mode === 'in') {
-      // Check In
-      const newRec = {
-        id: `rec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        user_id: currentUserId,
-        user_name: currentUser?.user_metadata?.full_name || currentUser?.email || 'Mariana Velandia',
-        user_email: currentUser?.email || 'mariana@lightpro.com',
-        work_date: nowIso.substring(0, 10),
-        check_in_time: nowIso,
-        check_in_photo_url: remotePhotoUrl,
-        check_in_location: locationText,
-        check_in_lat: coords?.lat || null,
-        check_in_lng: coords?.lng || null,
-        check_out_time: null,
-        check_out_photo_url: null,
-        check_out_location: null,
-        check_out_lat: null,
-        check_out_lng: null,
-        status: 'open',
-        gross_minutes: 0,
-        lunch_break_minutes: 0,
-        effective_minutes: 0,
-        reference_minutes: 540,
-        balance_minutes: 0,
-        compensated_minutes: 0,
-        extra_daytime_minutes: 0,
-        extra_nighttime_minutes: 0,
-        extra_sunday_holiday_day_minutes: 0,
-        extra_sunday_holiday_night_minutes: 0,
-        extra_money_amount: 0,
-        review_status: 'normal',
-        review_notes: '',
-        created_at: nowIso,
-      };
-
-      setRecords(prev => [newRec, ...prev]);
-
-      // Attempt insert in Supabase
-      if (isSupabaseConfigured && supabase) {
+      if (!resolvedUserId && isSupabaseConfigured && supabase) {
         try {
-          await supabase.from('attendance_records').insert([newRec]);
-        } catch (err) {
-          console.warn('Supabase insert notice:', err);
+          const { data: authData } = await supabase.auth.getUser();
+          if (authData?.user?.id) {
+            resolvedUserId = authData.user.id;
+            resolvedEmail = authData.user.email || resolvedEmail;
+            resolvedName = authData.user.user_metadata?.full_name || resolvedEmail.split('@')[0] || resolvedName;
+          }
+        } catch (authErr) {
+          console.warn('Error resolviendo usuario auth:', authErr);
         }
       }
-    } else if (mode === 'out' && activePersonalRecord) {
-      // Check Out
-      // Calculate prior deficit from past records
-      const priorDeficitMinutes = myRecords
-        .filter(r => r.id !== activePersonalRecord.id && (r.balance_minutes || 0) < 0)
-        .reduce((sum, r) => sum + Math.abs(r.balance_minutes), 0);
 
-      const calculated = calculateAttendanceMetrics({
-        checkInTime: activePersonalRecord.check_in_time,
-        checkOutTime: nowIso,
-        schedules,
-        rates,
-        priorDeficitMinutes,
-      });
+      if (!resolvedUserId) {
+        alert('No se detectó una sesión activa en el sistema. Por favor recarga la página o inicia sesión nuevamente.');
+        setIsRegistering(false);
+        return;
+      }
 
-      const updatedRecord = {
-        ...activePersonalRecord,
-        check_out_time: nowIso,
-        check_out_photo_url: remotePhotoUrl,
-        check_out_location: locationText,
-        check_out_lat: coords?.lat || null,
-        check_out_lng: coords?.lng || null,
-        status: 'completed',
-        gross_minutes: calculated.grossMinutes,
-        lunch_break_minutes: calculated.lunchBreakMinutes,
-        effective_minutes: calculated.effectiveMinutes,
-        reference_minutes: calculated.referenceMinutes,
-        balance_minutes: calculated.balanceMinutes,
-        compensated_minutes: calculated.compensatedMinutes,
-        extra_daytime_minutes: calculated.extraDaytimeMinutes,
-        extra_nighttime_minutes: calculated.extraNighttimeMinutes,
-        extra_sunday_holiday_day_minutes: calculated.extraSundayHolidayDayMinutes,
-        extra_sunday_holiday_night_minutes: calculated.extraSundayHolidayNightMinutes,
-        extra_money_amount: calculated.extraMoneyAmount,
-        review_status: calculated.reviewStatus,
-        review_notes: calculated.hasOddMinutes
-          ? 'Minutos impares fuera de intervalos :00 / :30. Pendiente de validación.'
-          : '',
-        updated_at: nowIso,
-      };
+      // 1. Get GPS coordinates & location string (200m rule vs. street address)
+      const coords = await getCurrentDeviceLocation();
+      const locationText = await resolveLocationText(coords, sedeConfig);
 
-      setRecords(prev => prev.map(r => r.id === activePersonalRecord.id ? updatedRecord : r));
+      // 2. Upload compressed photo to Supabase Storage (with base64 fallback)
+      let remotePhotoUrl = photoBase64;
+      try {
+        const uploaded = await uploadImageToSupabaseStorage(photoBase64, `attendance-${mode}`);
+        if (uploaded) remotePhotoUrl = uploaded;
+      } catch (e) {
+        console.warn('Storage upload fallback to base64:', e);
+      }
 
-      // Attempt update in Supabase
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase
+      if (mode === 'in') {
+        // Check In (Generate standard UUID v4 accepted by PostgreSQL UUID column)
+        const newRecId = generateUUID();
+        const newRec = {
+          id: newRecId,
+          user_id: resolvedUserId,
+          user_name: resolvedName,
+          user_email: resolvedEmail,
+          work_date: nowIso.substring(0, 10),
+          check_in_time: nowIso,
+          check_in_photo_url: remotePhotoUrl,
+          check_in_location: locationText,
+          check_in_lat: coords?.lat || null,
+          check_in_lng: coords?.lng || null,
+          check_out_time: null,
+          check_out_photo_url: null,
+          check_out_location: null,
+          check_out_lat: null,
+          check_out_lng: null,
+          status: 'open',
+          gross_minutes: 0,
+          lunch_break_minutes: 0,
+          effective_minutes: 0,
+          reference_minutes: 540,
+          balance_minutes: 0,
+          compensated_minutes: 0,
+          extra_daytime_minutes: 0,
+          extra_nighttime_minutes: 0,
+          extra_sunday_holiday_day_minutes: 0,
+          extra_sunday_holiday_night_minutes: 0,
+          extra_money_amount: 0,
+          review_status: 'normal',
+          review_notes: '',
+          created_at: nowIso,
+        };
+
+        setRecords(prev => [newRec, ...prev]);
+
+        if (isSupabaseConfigured && supabase) {
+          const { error: insertErr } = await supabase.from('attendance_records').insert([newRec]);
+          if (insertErr) {
+            console.error('Error insertando registro en Supabase:', insertErr);
+            alert(`Atención: El registro se guardó temporalmente en memoria pero falló la sincronización con la base de datos de Supabase:\n\n${insertErr.message}`);
+          } else {
+            console.log('✅ Marcación de entrada sincronizada exitosamente en Supabase:', newRecId);
+          }
+        }
+      } else if (mode === 'out' && activePersonalRecord) {
+        // Check Out
+        const priorDeficitMinutes = myRecords
+          .filter(r => r.id !== activePersonalRecord.id && (r.balance_minutes || 0) < 0)
+          .reduce((sum, r) => sum + Math.abs(r.balance_minutes), 0);
+
+        const calculated = calculateAttendanceMetrics({
+          checkInTime: activePersonalRecord.check_in_time,
+          checkOutTime: nowIso,
+          schedules,
+          rates,
+          priorDeficitMinutes,
+        });
+
+        const updatedRecord = {
+          ...activePersonalRecord,
+          check_out_time: nowIso,
+          check_out_photo_url: remotePhotoUrl,
+          check_out_location: locationText,
+          check_out_lat: coords?.lat || null,
+          check_out_lng: coords?.lng || null,
+          status: 'completed',
+          gross_minutes: calculated.grossMinutes,
+          lunch_break_minutes: calculated.lunchBreakMinutes,
+          effective_minutes: calculated.effectiveMinutes,
+          reference_minutes: calculated.referenceMinutes,
+          balance_minutes: calculated.balanceMinutes,
+          compensated_minutes: calculated.compensatedMinutes,
+          extra_daytime_minutes: calculated.extraDaytimeMinutes,
+          extra_nighttime_minutes: calculated.extraNighttimeMinutes,
+          extra_sunday_holiday_day_minutes: calculated.extraSundayHolidayDayMinutes,
+          extra_sunday_holiday_night_minutes: calculated.extraSundayHolidayNightMinutes,
+          extra_money_amount: calculated.extraMoneyAmount,
+          review_status: calculated.reviewStatus,
+          review_notes: calculated.hasOddMinutes
+            ? 'Minutos impares fuera de intervalos :00 / :30. Pendiente de validación.'
+            : '',
+          updated_at: nowIso,
+        };
+
+        setRecords(prev => prev.map(r => r.id === activePersonalRecord.id ? updatedRecord : r));
+
+        if (isSupabaseConfigured && supabase) {
+          const { error: updErr } = await supabase
             .from('attendance_records')
             .update(updatedRecord)
             .eq('id', activePersonalRecord.id);
-        } catch (err) {
-          console.warn('Supabase update notice:', err);
+          if (updErr) {
+            console.error('Error actualizando salida en Supabase:', updErr);
+            alert(`Atención: La salida se guardó temporalmente pero falló la sincronización con Supabase:\n\n${updErr.message}`);
+          } else {
+            console.log('✅ Marcación de salida sincronizada exitosamente en Supabase:', activePersonalRecord.id);
+          }
         }
       }
+    } catch (err) {
+      console.error('Error al registrar:', err);
+      alert('Error en el registro: ' + (err.message || 'Error de conexión'));
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -712,57 +707,69 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 Control de Horarios y Asistencia
               </h1>
               <p className="text-xs text-gray-500 font-medium">
-                Gestión de entradas/salidas, cálculo de extras, balances y liquidación Light Pro
+                Gestión fotográfica, geolocalización GPS, cálculo de extras y liquidación Light Pro
               </p>
             </div>
           </div>
         </div>
 
-        {/* Tab Controls for Administrators */}
-        {isAdmin && (
-          <div className="flex items-center gap-1.5 p-1 bg-gray-100/90 rounded-2xl border border-gray-200 self-stretch sm:self-auto">
-            <button
-              onClick={() => setActiveSubTab('personal')}
-              className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                activeSubTab === 'personal'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-gray-500 hover:text-black'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Mi Marcación</span>
-            </button>
+        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+          <button
+            onClick={fetchSupabaseAttendance}
+            disabled={isSyncing}
+            className="px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+            title="Sincronizar asistencias con la base de datos de Supabase"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-500' : 'text-gray-500'}`} />
+            <span>{isSyncing ? 'Sincronizando...' : 'Actualizar'}</span>
+          </button>
 
-            <button
-              onClick={() => setActiveSubTab('admin')}
-              className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                activeSubTab === 'admin'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-gray-500 hover:text-black'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Panel Administrativo</span>
-              {adminKPIs.pendingReviewCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
-                  {adminKPIs.pendingReviewCount}
-                </span>
-              )}
-            </button>
+          {/* Tab Controls for Administrators */}
+          {isAdmin && (
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100/90 rounded-2xl border border-gray-200">
+              <button
+                onClick={() => setActiveSubTab('personal')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  activeSubTab === 'personal'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Mi Marcación</span>
+              </button>
 
-            <button
-              onClick={() => setActiveSubTab('config')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                activeSubTab === 'config'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-gray-500 hover:text-black'
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Configuración</span>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => setActiveSubTab('admin')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  activeSubTab === 'admin'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Panel Administrativo</span>
+                {adminKPIs.pendingReviewCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
+                    {adminKPIs.pendingReviewCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveSubTab('config')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  activeSubTab === 'config'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Configuración</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -791,13 +798,13 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-                  Hola, {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Mariana'}
+                  Hola, {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Colaborador'}
                 </h2>
 
                 <p className="text-xs sm:text-sm text-gray-500 max-w-lg leading-relaxed">
                   {activePersonalRecord
-                    ? `Registraste tu entrada hoy a las ${new Date(activePersonalRecord.check_in_time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} con validación fotográfica.`
-                    : 'Para iniciar tu jornada laboral, pulsa el botón para tomar tu fotografía y certificar tu hora de entrada.'}
+                    ? `Registraste tu entrada hoy a las ${new Date(activePersonalRecord.check_in_time).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} con foto en ${activePersonalRecord.check_in_location || 'Sede Light Pro'}.`
+                    : 'Para iniciar tu jornada laboral, pulsa el botón para tomar tu fotografía y registrar tu asistencia con GPS.'}
                 </p>
 
                 {activePersonalRecord && (
@@ -815,18 +822,20 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 {activePersonalRecord ? (
                   <button
                     onClick={() => setCameraModalConfig({ isOpen: true, mode: 'out' })}
-                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-sm shadow-xl hover:shadow-red-500/25 transition-all flex items-center justify-center gap-2.5 hover:scale-105 active:scale-95"
+                    disabled={isRegistering}
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-black text-sm shadow-xl hover:shadow-red-500/25 transition-all flex items-center justify-center gap-2.5 hover:scale-105 active:scale-95 disabled:opacity-50"
                   >
                     <LogOut className="w-5 h-5 text-white" />
-                    <span>Registrar Salida (Foto)</span>
+                    <span>Registrar Salida (Foto y GPS)</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => setCameraModalConfig({ isOpen: true, mode: 'in' })}
-                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-black hover:bg-gray-800 text-white font-black text-sm shadow-xl hover:shadow-black/25 transition-all flex items-center justify-center gap-2.5 hover:scale-105 active:scale-95"
+                    disabled={isRegistering}
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-black hover:bg-gray-800 text-white font-black text-sm shadow-xl hover:shadow-black/25 transition-all flex items-center justify-center gap-2.5 hover:scale-105 active:scale-95 disabled:opacity-50"
                   >
                     <Camera className="w-5 h-5 text-amber-400" />
-                    <span>Registrar Entrada (Foto)</span>
+                    <span>Registrar Entrada (Foto y GPS)</span>
                   </button>
                 )}
               </div>
@@ -899,7 +908,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                   Mi Historial de Registros
                 </h3>
                 <p className="text-xs text-gray-400">
-                  Tus marcaciones personales certificadas con fotografías y cálculos
+                  Tus marcaciones personales certificadas con fotos, ubicación GPS y cálculos
                 </p>
               </div>
             </div>
@@ -909,8 +918,8 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 <thead className="bg-gray-50/75 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
                   <tr>
                     <th className="py-3 px-4">Fecha</th>
-                    <th className="py-3 px-4">Entrada</th>
-                    <th className="py-3 px-4">Salida</th>
+                    <th className="py-3 px-4">Entrada (Foto / GPS)</th>
+                    <th className="py-3 px-4">Salida (Foto / GPS)</th>
                     <th className="py-3 px-4">Permanencia</th>
                     <th className="py-3 px-4">Almuerzo</th>
                     <th className="py-3 px-4">Efectivo</th>
@@ -923,8 +932,8 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 <tbody className="divide-y divide-gray-100">
                   {myRecords.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="py-8 text-center text-gray-400 text-xs">
-                        Aún no tienes registros de asistencia.
+                      <td colSpan="10" className="py-12 text-center text-gray-400 text-xs">
+                        Aún no tienes registros de asistencia. Pulsa &quot;Registrar Entrada&quot; para iniciar tu primera jornada.
                       </td>
                     </tr>
                   ) : (
@@ -933,6 +942,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                         <td className="py-3 px-4 font-bold text-gray-900 whitespace-nowrap">
                           {r.work_date}
                         </td>
+
                         <td className="py-3 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {r.check_in_photo_url && (
@@ -967,6 +977,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                             </div>
                           </div>
                         </td>
+
                         <td className="py-3 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {r.check_out_photo_url ? (
@@ -1003,6 +1014,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                             </div>
                           </div>
                         </td>
+
                         <td className="py-3 px-4 text-gray-600 font-mono whitespace-nowrap">
                           {r.gross_minutes ? formatMinutes(r.gross_minutes) : '-'}
                         </td>
@@ -1184,7 +1196,7 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                   Registros de Asistencia y Liquidaciones ({adminFilteredRecords.length})
                 </h3>
                 <p className="text-xs text-gray-400">
-                  Inspección completa, validación fotográfica y aprobación de horas extras
+                  Inspección completa, fotos de evidencia, ubicación GPS y aprobación de horas extras
                 </p>
               </div>
             </div>
@@ -1195,8 +1207,8 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                   <tr>
                     <th className="py-3 px-4">Colaborador</th>
                     <th className="py-3 px-4">Fecha</th>
-                    <th className="py-3 px-4">Entrada (Foto)</th>
-                    <th className="py-3 px-4">Salida (Foto)</th>
+                    <th className="py-3 px-4">Entrada (Foto / GPS)</th>
+                    <th className="py-3 px-4">Salida (Foto / GPS)</th>
                     <th className="py-3 px-4">Efectivo</th>
                     <th className="py-3 px-4">Saldo</th>
                     <th className="py-3 px-4">Extras Diurna</th>
@@ -1209,16 +1221,16 @@ export default function HorariosView({ currentUser, currentRole, teamMembers = [
                 <tbody className="divide-y divide-gray-100">
                   {adminFilteredRecords.length === 0 ? (
                     <tr>
-                      <td colSpan="11" className="py-8 text-center text-gray-400 text-xs">
-                        No se encontraron registros con los filtros seleccionados.
+                      <td colSpan="11" className="py-12 text-center text-gray-400 text-xs">
+                        No se encontraron registros de asistencia con los filtros seleccionados. Las marcaciones de los colaboradores aparecerán aquí automáticamente.
                       </td>
                     </tr>
                   ) : (
                     adminFilteredRecords.map((r) => (
                       <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
                         <td className="py-3 px-4 whitespace-nowrap">
-                          <div className="font-bold text-gray-900">{r.user_name || 'Mariana Velandia'}</div>
-                          <div className="text-[10px] text-gray-400">{r.user_email || 'mariana@lightpro.com'}</div>
+                          <div className="font-bold text-gray-900">{r.user_name || 'Colaborador'}</div>
+                          <div className="text-[10px] text-gray-400">{r.user_email || ''}</div>
                         </td>
 
                         <td className="py-3 px-4 font-mono font-medium text-gray-700 whitespace-nowrap">
